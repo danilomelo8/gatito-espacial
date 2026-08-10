@@ -157,7 +157,7 @@
             victoriaAnim: 0,
             doritosAnim: 0,
             naveAnim: 0,
-            planetaY: 0
+            faseDificil: false
         };
 
         // ============================================================
@@ -177,9 +177,6 @@
                 this.antenaMov = 0;
                 this.comiendo = false;
                 this.comerAnim = 0;
-                this.enNave = false;
-                this.naveX = 0;
-                this.naveY = 0;
             }
 
             getY() {
@@ -440,10 +437,10 @@
         }
 
         // ============================================================
-        // CLASE OBSTÁCULO - CORREGIDA
+        // CLASE OBSTÁCULO - SIN NAVES
         // ============================================================
         class Obstaculo {
-            constructor(carril, tipo, esNave = false) {
+            constructor(carril, tipo) {
                 const s = S;
                 this.carril = carril;
                 this.tipo = tipo || randInt(0, 2);
@@ -451,28 +448,19 @@
                 this.alto = 28 * s;
                 this.x = W + 30 * s;
                 this.y = this.getY();
-                this.velocidad = (juego.velocidadBase + juego.velocidad * 0.8) * s;
+                // Velocidad base más alta
+                const velocidadBase = juego.faseDificil ? 18 : 12;
+                this.velocidad = (velocidadBase * s + juego.velocidad * 0.9 * s);
                 this.rotacion = 0;
                 this.vida = true;
                 this.contado = false;
-                this.esNave = esNave;
                 this.colores = ['#FF6B6B', '#4ECDC4', '#45B7D1', '#FFA94D', '#A8E6CF', '#FF6B35', '#7C4DFF'];
                 this.color = this.colores[randInt(0, 6)];
                 this.formas = ['meteorito', 'asteroide', 'basura', 'satelite', 'ovni'];
                 this.forma = this.formas[randInt(0, 4)];
-                this.tiempoDisparo = 0;
-                this.disparos = [];
-                this.yaDisparo = false;
                 if (Math.random() < 0.15) {
                     this.ancho *= 1.5;
                     this.alto *= 1.5;
-                }
-                if (esNave) {
-                    this.ancho = 35 * s;
-                    this.alto = 30 * s;
-                    this.velocidad *= 0.7;
-                    this.color = '#45B7D1';
-                    this.forma = 'nave';
                 }
             }
 
@@ -487,38 +475,6 @@
                 this.rotacion += 0.1;
                 if (this.x < -60 * S) {
                     this.vida = false;
-                }
-                
-                // Disparos de nave - CORREGIDO
-                if (this.esNave && this.x < W * 0.7 && this.x > 50 * S && !this.yaDisparo) {
-                    this.tiempoDisparo++;
-                    if (this.tiempoDisparo > 50 + Math.random() * 30) {
-                        this.tiempoDisparo = 0;
-                        this.yaDisparo = true;
-                        // Dispara a carriles aleatorios
-                        const carrilObj = randInt(0, 2);
-                        const s = S;
-                        this.disparos.push({
-                            x: this.x - 10 * s,
-                            y: 50 * S + carrilObj * ((H - 100 * S) / 3) + ((H - 100 * S) / 3) / 2 - 4 * s,
-                            w: 10 * s,
-                            h: 10 * s,
-                            vel: 6 * s,
-                            carril: carrilObj,
-                            vida: 120
-                        });
-                        crearParticulas(this.x, this.y, '#FF6B6B', 5, 2);
-                    }
-                }
-                
-                // Mover disparos
-                for (let i = this.disparos.length - 1; i >= 0; i--) {
-                    const d = this.disparos[i];
-                    d.x -= d.vel;
-                    d.vida--;
-                    if (d.x < -20 * s || d.vida <= 0) {
-                        this.disparos.splice(i, 1);
-                    }
                 }
             }
 
@@ -536,43 +492,7 @@
                 ctx.shadowColor = 'rgba(255,200,100,0.3)';
                 ctx.shadowBlur = 20 * s;
 
-                if (this.forma === 'nave') {
-                    ctx.fillStyle = '#45B7D1';
-                    ctx.shadowColor = 'rgba(100,200,255,0.5)';
-                    ctx.shadowBlur = 30 * s;
-                    ctx.beginPath();
-                    ctx.moveTo(w / 2, 0);
-                    ctx.lineTo(-w / 3, -h / 2);
-                    ctx.lineTo(-w / 2, -h / 3);
-                    ctx.lineTo(-w / 2, h / 3);
-                    ctx.lineTo(-w / 3, h / 2);
-                    ctx.closePath();
-                    ctx.fill();
-                    ctx.fillStyle = '#4ECDC4';
-                    ctx.fillRect(-w / 2, -h / 4, -w / 4, h / 2);
-                    ctx.fillRect(-w / 3, -h / 4, -w / 4, h / 2);
-                    ctx.fillStyle = '#FFD93D';
-                    ctx.beginPath();
-                    ctx.arc(-w / 6, 0, 8 * s, 0, Math.PI * 2);
-                    ctx.fill();
-                    ctx.fillStyle = '#88CCFF';
-                    ctx.beginPath();
-                    ctx.arc(-w / 6, 0, 5 * s, 0, Math.PI * 2);
-                    ctx.fill();
-                    ctx.fillStyle = '#FF6B6B';
-                    ctx.beginPath();
-                    ctx.arc(w / 3, -h / 3, 3 * s, 0, Math.PI * 2);
-                    ctx.fill();
-                    ctx.fillStyle = '#4ECDC4';
-                    ctx.beginPath();
-                    ctx.arc(w / 3, h / 3, 3 * s, 0, Math.PI * 2);
-                    ctx.fill();
-                    // Indicador de que dispara
-                    ctx.fillStyle = 'rgba(255,0,0,0.2)';
-                    ctx.beginPath();
-                    ctx.arc(0, 0, 20 * s, 0, Math.PI * 2);
-                    ctx.fill();
-                } else if (this.forma === 'meteorito') {
+                if (this.forma === 'meteorito') {
                     ctx.fillStyle = this.color;
                     ctx.shadowColor = 'rgba(255,200,100,0.3)';
                     ctx.shadowBlur = 20 * s;
@@ -635,6 +555,7 @@
                     ctx.arc(0, -h / 2 - 12 * s, 4 * s, 0, Math.PI * 2);
                     ctx.fill();
                 } else {
+                    // OVNI
                     ctx.fillStyle = '#7C4DFF';
                     ctx.shadowColor = 'rgba(150,100,255,0.3)';
                     ctx.shadowBlur = 20 * s;
@@ -670,36 +591,6 @@
                 ctx.fill();
 
                 ctx.restore();
-
-                // Dibujar disparos
-                for (const d of this.disparos) {
-                    ctx.shadowColor = 'rgba(255,0,0,0.6)';
-                    ctx.shadowBlur = 20 * s;
-                    // Círculo exterior
-                    ctx.fillStyle = 'rgba(255,0,0,0.3)';
-                    ctx.beginPath();
-                    ctx.arc(d.x, d.y, d.w, 0, Math.PI * 2);
-                    ctx.fill();
-                    // Círculo interior
-                    ctx.fillStyle = '#FF1744';
-                    ctx.shadowColor = 'rgba(255,0,0,0.8)';
-                    ctx.shadowBlur = 30 * s;
-                    ctx.beginPath();
-                    ctx.arc(d.x, d.y, d.w * 0.6, 0, Math.PI * 2);
-                    ctx.fill();
-                    // Núcleo
-                    ctx.fillStyle = '#FF6B6B';
-                    ctx.shadowBlur = 0;
-                    ctx.beginPath();
-                    ctx.arc(d.x - 2 * s, d.y - 2 * s, d.w * 0.25, 0, Math.PI * 2);
-                    ctx.fill();
-                    // Estela
-                    ctx.fillStyle = 'rgba(255,0,0,0.1)';
-                    ctx.beginPath();
-                    ctx.arc(d.x + 10 * s, d.y, d.w * 0.5, 0, Math.PI * 2);
-                    ctx.fill();
-                }
-                ctx.shadowBlur = 0;
             }
 
             colisiona(gato) {
@@ -708,16 +599,10 @@
                 const gy = gato.y + gato.alto / 2;
                 const ox = this.x + this.ancho / 2;
                 const oy = this.y + this.alto / 2;
+                const dist = Math.hypot(gx - ox, gy - oy);
                 const radioGato = Math.min(gato.ancho, gato.alto) / 2.5;
                 const radioObs = Math.min(this.ancho, this.alto) / 2;
-                
-                for (const d of this.disparos) {
-                    const distD = Math.hypot(gx - d.x, gy - d.y);
-                    if (distD < radioGato + d.w / 2) {
-                        return true;
-                    }
-                }
-                return dist(gx, gy, ox, oy) < radioGato + radioObs;
+                return dist < radioGato + radioObs;
             }
         }
 
@@ -809,10 +694,6 @@
             return Math.floor(rand(min, max + 1));
         }
 
-        function dist(x1, y1, x2, y2) {
-            return Math.hypot(x2 - x1, y2 - y1);
-        }
-
         // ============================================================
         // VARIABLES DEL JUEGO
         // ============================================================
@@ -840,7 +721,7 @@
             juego.victoriaAnim = 0;
             juego.doritosAnim = 0;
             juego.naveAnim = 0;
-            juego.planetaY = H;
+            juego.faseDificil = false;
             spawnTimer = 0;
             frameCount = 0;
             document.getElementById('scoreDisplay').textContent = '0';
@@ -852,16 +733,16 @@
             const carrilesDisponibles = [];
             for (let i = 0; i < 3; i++) carrilesDisponibles.push(i);
 
-            const puedeNave = juego.score > 35 && Math.random() < 0.2;
-            const numObstaculos = juego.score > 25 && Math.random() < 0.4 ? 2 : 1;
+            // Más obstáculos en fase difícil (hasta 3)
+            const maxObstaculos = juego.faseDificil ? 3 : 2;
+            const numObstaculos = juego.score > 25 ? Math.min(1 + Math.floor(Math.random() * maxObstaculos), maxObstaculos) : 1;
 
             for (let i = 0; i < numObstaculos; i++) {
                 if (carrilesDisponibles.length === 0) break;
                 const idx = randInt(0, carrilesDisponibles.length - 1);
                 const carril = carrilesDisponibles[idx];
                 carrilesDisponibles.splice(idx, 1);
-                const esNave = puedeNave && i === 0 && Math.random() < 0.4;
-                const obs = new Obstaculo(carril, null, esNave);
+                const obs = new Obstaculo(carril);
                 obstaculos.push(obs);
             }
         }
@@ -872,18 +753,33 @@
             frameCount++;
             const s = S;
 
-            if (frameCount % 25 === 0 && juego.velocidad < 25) {
-                juego.velocidad += 0.2;
+            // A partir de 80 puntos, FASE DIFÍCIL
+            if (juego.score >= 80 && !juego.faseDificil) {
+                juego.faseDificil = true;
+                // Aumentar velocidad base
+                juego.velocidadBase = 18 * s;
+                crearParticulas(W / 2, H / 2, '#FFD700', 50, 8);
+                crearParticulas(W / 2 - 100 * s, H / 2, '#FF6B6B', 30, 6);
+                crearParticulas(W / 2 + 100 * s, H / 2, '#4ECDC4', 30, 6);
+            }
+
+            // Aumentar velocidad más rápido en fase difícil
+            const incrementoVel = juego.faseDificil ? 0.35 : 0.2;
+            if (frameCount % (juego.faseDificil ? 20 : 25) === 0 && juego.velocidad < (juego.faseDificil ? 30 : 25)) {
+                juego.velocidad += incrementoVel;
                 document.getElementById('speedDisplay').textContent = Math.floor(juego.velocidad * 10) / 10;
             }
 
-            const intervalo = Math.max(18, 45 - juego.velocidad * 1.2);
+            // Spawn más frecuente en fase difícil
+            const intervaloBase = juego.faseDificil ? 12 : 18;
+            const intervalo = Math.max(intervaloBase, 35 - juego.velocidad * 1.0);
             juego.spawnTimer++;
-            if (juego.spawnTimer > intervalo + Math.random() * 15) {
+            if (juego.spawnTimer > intervalo + Math.random() * (juego.faseDificil ? 10 : 15)) {
                 juego.spawnTimer = 0;
                 spawnObstaculo();
             }
 
+            // Mover obstáculos
             for (let i = obstaculos.length - 1; i >= 0; i--) {
                 const obs = obstaculos[i];
                 obs.mover();
@@ -918,7 +814,8 @@
             actualizarParticulas();
 
             for (const e of juego.estrellas) {
-                e.x -= 0.2 * juego.velocidad * S;
+                const velEstrella = juego.faseDificil ? 0.35 : 0.2;
+                e.x -= velEstrella * juego.velocidad * S;
                 if (e.x < 0) e.x = W;
             }
         }
@@ -1201,7 +1098,7 @@
             ctx.fillText('Esquiva los obstáculos y llega a 100 puntos', W / 2, 265 * s);
             ctx.fillStyle = '#FF6B6B';
             ctx.font = `${14*s}px Arial`;
-            ctx.fillText('⚠️ Cuidado con las naves enemigas que disparan', W / 2, 295 * s);
+            ctx.fillText('⚡ A partir de 80 puntos, ¡velocidad extrema!', W / 2, 295 * s);
 
             if (juego.record > 0) {
                 ctx.fillStyle = '#FFD700';
@@ -1364,6 +1261,18 @@
                 ctx.stroke();
             }
             ctx.setLineDash([]);
+
+            // Indicador de fase difícil
+            if (juego.faseDificil) {
+                ctx.fillStyle = 'rgba(255,0,0,0.05)';
+                ctx.fillRect(0, 0, W, H);
+                // Texto de advertencia
+                ctx.fillStyle = 'rgba(255,0,0,0.3)';
+                ctx.font = `bold ${30*s}px Arial`;
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'top';
+                ctx.fillText('⚡ ¡FASE EXTREMA! ⚡', W / 2, 10 * s);
+            }
 
             for (const obs of obstaculos) {
                 obs.dibujar();
