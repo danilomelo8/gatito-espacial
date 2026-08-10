@@ -138,10 +138,65 @@
         resize();
 
         // ============================================================
+        // SISTEMA DE SKINS Y MONEDAS
+        // ============================================================
+        const SKINS = [
+            { id: 'verde', nombre: '🐱 Gato Verde', precio: 0, color: '#66FF88', color2: '#33CC55', color3: '#1A8C33', desbloqueado: true },
+            { id: 'naranja', nombre: '🐱 Gato Naranja', precio: 500, color: '#FFA94D', color2: '#FF8C00', color3: '#CC6A00', desbloqueado: false },
+            { id: 'morado', nombre: '🐱 Gato Morado', precio: 1000, color: '#B388FF', color2: '#7C4DFF', color3: '#4A148C', desbloqueado: false },
+            { id: 'dorado', nombre: '🐱 Gato Dorado', precio: 1500, color: '#FFD700', color2: '#FFC107', color3: '#FF8F00', desbloqueado: false }
+        ];
+
+        let monedas = parseInt(localStorage.getItem('spaceCatMonedas')) || 0;
+        let skinActual = localStorage.getItem('spaceCatSkin') || 'verde';
+
+        // Cargar desbloqueos guardados
+        SKINS.forEach(skin => {
+            const key = 'spaceCatSkin_' + skin.id;
+            if (localStorage.getItem(key) === 'true') {
+                skin.desbloqueado = true;
+            }
+        });
+        // Asegurar que la skin verde siempre está desbloqueada
+        SKINS[0].desbloqueado = true;
+
+        function guardarMonedas() {
+            localStorage.setItem('spaceCatMonedas', String(monedas));
+        }
+
+        function guardarSkin() {
+            localStorage.setItem('spaceCatSkin', skinActual);
+        }
+
+        function desbloquearSkin(id) {
+            const skin = SKINS.find(s => s.id === id);
+            if (!skin || skin.desbloqueado) return false;
+            if (monedas < skin.precio) return false;
+            monedas -= skin.precio;
+            skin.desbloqueado = true;
+            localStorage.setItem('spaceCatSkin_' + id, 'true');
+            guardarMonedas();
+            return true;
+        }
+
+        function seleccionarSkin(id) {
+            const skin = SKINS.find(s => s.id === id);
+            if (!skin || !skin.desbloqueado) return false;
+            skinActual = id;
+            guardarSkin();
+            return true;
+        }
+
+        function getSkinData() {
+            return SKINS.find(s => s.id === skinActual) || SKINS[0];
+        }
+
+        // ============================================================
         // ESTADO DEL JUEGO
         // ============================================================
         const juego = {
             menu: true,
+            tienda: false,
             jugando: false,
             gameOver: false,
             victoria: false,
@@ -157,11 +212,12 @@
             victoriaAnim: 0,
             doritosAnim: 0,
             naveAnim: 0,
-            faseDificil: false
+            faseDificil: false,
+            skinSeleccionada: skinActual
         };
 
         // ============================================================
-        // CLASE GATO MARCIANO
+        // CLASE GATO - CON COLORES DINÁMICOS
         // ============================================================
         class Gato {
             constructor() {
@@ -177,6 +233,10 @@
                 this.antenaMov = 0;
                 this.comiendo = false;
                 this.comerAnim = 0;
+                const skin = getSkinData();
+                this.color1 = skin.color;
+                this.color2 = skin.color2;
+                this.color3 = skin.color3;
             }
 
             getY() {
@@ -189,11 +249,11 @@
                 if (arriba && this.carril > 0) {
                     this.carril--;
                     this.y = this.getY();
-                    crearParticulas(this.x + this.ancho / 2, this.y + this.alto / 2, '#66ff88', 10, 2);
+                    crearParticulas(this.x + this.ancho / 2, this.y + this.alto / 2, this.color1, 10, 2);
                 } else if (!arriba && this.carril < 2) {
                     this.carril++;
                     this.y = this.getY();
-                    crearParticulas(this.x + this.ancho / 2, this.y + this.alto / 2, '#66ff88', 10, 2);
+                    crearParticulas(this.x + this.ancho / 2, this.y + this.alto / 2, this.color1, 10, 2);
                 }
             }
 
@@ -203,6 +263,9 @@
                 const y = this.y;
                 const w = this.ancho;
                 const h = this.alto;
+                const c1 = this.color1;
+                const c2 = this.color2;
+                const c3 = this.color3;
 
                 this.animacion += 0.05;
                 this.parpadeo += 0.03;
@@ -215,25 +278,28 @@
 
                 ctx.save();
 
-                ctx.shadowColor = 'rgba(100,255,150,0.2)';
+                ctx.shadowColor = c1 + '33';
                 ctx.shadowBlur = 30 * s;
 
+                // Cuerpo
                 const gradCuerpo = ctx.createRadialGradient(x + w / 2, y + h / 2, 0, x + w / 2, y + h / 2, w);
-                gradCuerpo.addColorStop(0, '#66FF88');
-                gradCuerpo.addColorStop(0.6, '#33CC55');
-                gradCuerpo.addColorStop(1, '#1A8C33');
+                gradCuerpo.addColorStop(0, c1);
+                gradCuerpo.addColorStop(0.6, c2);
+                gradCuerpo.addColorStop(1, c3);
                 ctx.fillStyle = gradCuerpo;
                 ctx.beginPath();
                 ctx.ellipse(x + w / 2, y + h / 2 + 8 * s, w / 2.3, h / 2.7, 0, 0, Math.PI * 2);
                 ctx.fill();
 
-                ctx.fillStyle = '#66FF88';
+                // Cabeza
+                ctx.fillStyle = c1;
                 ctx.beginPath();
                 ctx.arc(x + w / 2, y + h / 3 + 5 * s, w / 2.5, 0, Math.PI * 2);
                 ctx.fill();
 
+                // Antenas
                 const antMov = Math.sin(this.antenaMov) * 3 * s;
-                ctx.strokeStyle = '#33CC55';
+                ctx.strokeStyle = c2;
                 ctx.lineWidth = 3 * s;
                 ctx.beginPath();
                 ctx.moveTo(x + w / 2 - 10 * s, y + 4 * s);
@@ -246,9 +312,9 @@
                 ctx.arc(x + w / 2 - 8 * s, y - 30 * s + antMov, 5 * s, 0, Math.PI * 2);
                 ctx.fill();
 
-                ctx.shadowColor = 'rgba(100,255,150,0.2)';
+                ctx.shadowColor = c1 + '33';
                 ctx.shadowBlur = 30 * s;
-                ctx.strokeStyle = '#33CC55';
+                ctx.strokeStyle = c2;
                 ctx.lineWidth = 3 * s;
                 ctx.beginPath();
                 ctx.moveTo(x + w / 2 + 10 * s, y + 4 * s);
@@ -261,8 +327,9 @@
                 ctx.arc(x + w / 2 + 8 * s, y - 30 * s - antMov, 5 * s, 0, Math.PI * 2);
                 ctx.fill();
 
+                // Orejas
                 ctx.shadowBlur = 0;
-                ctx.fillStyle = '#44DD66';
+                ctx.fillStyle = c2;
                 ctx.beginPath();
                 ctx.moveTo(x + w / 2 - 14 * s, y + 4 * s);
                 ctx.lineTo(x + w / 2 - 26 * s, y - 6 * s);
@@ -274,7 +341,7 @@
                 ctx.lineTo(x + w / 2 + 6 * s, y + 2 * s);
                 ctx.fill();
 
-                ctx.fillStyle = '#88FF99';
+                ctx.fillStyle = c1;
                 ctx.beginPath();
                 ctx.moveTo(x + w / 2 - 14 * s, y + 5 * s);
                 ctx.lineTo(x + w / 2 - 22 * s, y - 3 * s);
@@ -286,6 +353,7 @@
                 ctx.lineTo(x + w / 2 + 8 * s, y + 3 * s);
                 ctx.fill();
 
+                // Ojos
                 const parpadeo = Math.sin(this.parpadeo * 3) > 0.9 ? 0.2 : 1;
                 ctx.fillStyle = '#FFFFFF';
                 ctx.beginPath();
@@ -323,6 +391,7 @@
                 ctx.arc(x + w / 2 + 8 * s + mirar, y + h / 3 + 5 * s, 2 * s, 0, Math.PI * 2);
                 ctx.fill();
 
+                // Nariz
                 ctx.fillStyle = '#FF6B6B';
                 ctx.shadowBlur = 0;
                 ctx.beginPath();
@@ -331,6 +400,7 @@
                 ctx.lineTo(x + w / 2 + 4 * s, y + h / 3 + 18 * s);
                 ctx.fill();
 
+                // Bigotes
                 ctx.strokeStyle = 'rgba(255,255,255,0.5)';
                 ctx.lineWidth = 1.5 * s;
                 const bigoteY = y + h / 3 + 16 * s;
@@ -359,6 +429,7 @@
                 ctx.lineTo(x + w / 2 + 22 * s, bigoteY + 8 * s);
                 ctx.stroke();
 
+                // Boca
                 ctx.strokeStyle = '#2E7D32';
                 ctx.lineWidth = 1.5 * s;
                 if (this.comiendo) {
@@ -376,8 +447,9 @@
                     ctx.stroke();
                 }
 
+                // Patas
                 const paso = Math.sin(this.patas) * 5 * s;
-                ctx.fillStyle = '#44DD66';
+                ctx.fillStyle = c2;
                 ctx.shadowBlur = 0;
                 ctx.beginPath();
                 ctx.roundRect(x + 4 * s, y + h / 2 + 10 * s + paso, 8 * s, 14 * s, 4 * s);
@@ -392,7 +464,7 @@
                 ctx.roundRect(x + w - 11 * s, y + h - 12 * s - paso * 0.5, 9 * s, 12 * s, 4 * s);
                 ctx.fill();
 
-                ctx.fillStyle = '#88FF99';
+                ctx.fillStyle = c1;
                 ctx.beginPath();
                 ctx.arc(x + 8 * s, y + h / 2 + 18 * s + paso, 3 * s, 0, Math.PI * 2);
                 ctx.fill();
@@ -400,9 +472,10 @@
                 ctx.arc(x + w - 8 * s, y + h / 2 + 18 * s - paso, 3 * s, 0, Math.PI * 2);
                 ctx.fill();
 
-                ctx.shadowColor = 'rgba(100,255,150,0.2)';
+                // Cola
+                ctx.shadowColor = c1 + '33';
                 ctx.shadowBlur = 15 * s;
-                ctx.fillStyle = '#44DD66';
+                ctx.fillStyle = c2;
                 const colaX = x + w - 2 * s;
                 const colaY = y + h / 2 + 10 * s;
                 const colaAng = Math.sin(this.colaMov) * 0.4 + 0.6;
@@ -418,7 +491,7 @@
                 ctx.lineCap = 'round';
                 ctx.stroke();
 
-                ctx.fillStyle = '#88FF99';
+                ctx.fillStyle = c1;
                 ctx.beginPath();
                 ctx.arc(
                     colaX + 32 * s * Math.cos(colaAng + 0.3),
@@ -427,8 +500,9 @@
                 );
                 ctx.fill();
 
+                // Rayas
                 ctx.shadowBlur = 0;
-                ctx.fillStyle = 'rgba(30, 160, 60, 0.3)';
+                ctx.fillStyle = c3 + '33';
                 ctx.fillRect(x + w / 2 - 12 * s, y + h / 3 + 24 * s, 24 * s, 4 * s);
                 ctx.fillRect(x + w / 2 - 14 * s, y + h / 3 + 30 * s, 28 * s, 3 * s);
 
@@ -437,7 +511,7 @@
         }
 
         // ============================================================
-        // CLASE OBSTÁCULO - SIN NAVES
+        // CLASE OBSTÁCULO
         // ============================================================
         class Obstaculo {
             constructor(carril, tipo) {
@@ -448,9 +522,8 @@
                 this.alto = 28 * s;
                 this.x = W + 30 * s;
                 this.y = this.getY();
-                // Velocidad base más alta
-                const velocidadBase = juego.faseDificil ? 18 : 12;
-                this.velocidad = (velocidadBase * s + juego.velocidad * 0.9 * s);
+                const velocidadBase = juego.faseDificil ? 16 : 12;
+                this.velocidad = (velocidadBase * s + juego.velocidad * 0.8 * s);
                 this.rotacion = 0;
                 this.vida = true;
                 this.contado = false;
@@ -458,9 +531,9 @@
                 this.color = this.colores[randInt(0, 6)];
                 this.formas = ['meteorito', 'asteroide', 'basura', 'satelite', 'ovni'];
                 this.forma = this.formas[randInt(0, 4)];
-                if (Math.random() < 0.15) {
-                    this.ancho *= 1.5;
-                    this.alto *= 1.5;
+                if (Math.random() < 0.12) {
+                    this.ancho *= 1.4;
+                    this.alto *= 1.4;
                 }
             }
 
@@ -718,6 +791,7 @@
             juego.victoria = false;
             juego.jugando = true;
             juego.menu = false;
+            juego.tienda = false;
             juego.victoriaAnim = 0;
             juego.doritosAnim = 0;
             juego.naveAnim = 0;
@@ -733,7 +807,6 @@
             const carrilesDisponibles = [];
             for (let i = 0; i < 3; i++) carrilesDisponibles.push(i);
 
-            // Más obstáculos en fase difícil (hasta 3)
             const maxObstaculos = juego.faseDificil ? 3 : 2;
             const numObstaculos = juego.score > 25 ? Math.min(1 + Math.floor(Math.random() * maxObstaculos), maxObstaculos) : 1;
 
@@ -748,33 +821,32 @@
         }
 
         function actualizar() {
-            if (juego.menu || juego.gameOver || juego.victoria || !gato) return;
+            if (juego.menu || juego.tienda || juego.gameOver || juego.victoria || !gato) return;
 
             frameCount++;
             const s = S;
 
-            // A partir de 80 puntos, FASE DIFÍCIL
+            // Fase difícil a partir de 80 puntos
             if (juego.score >= 80 && !juego.faseDificil) {
                 juego.faseDificil = true;
-                // Aumentar velocidad base
-                juego.velocidadBase = 18 * s;
+                juego.velocidadBase = 16 * s;
                 crearParticulas(W / 2, H / 2, '#FFD700', 50, 8);
                 crearParticulas(W / 2 - 100 * s, H / 2, '#FF6B6B', 30, 6);
                 crearParticulas(W / 2 + 100 * s, H / 2, '#4ECDC4', 30, 6);
             }
 
-            // Aumentar velocidad más rápido en fase difícil
-            const incrementoVel = juego.faseDificil ? 0.35 : 0.2;
-            if (frameCount % (juego.faseDificil ? 20 : 25) === 0 && juego.velocidad < (juego.faseDificil ? 30 : 25)) {
+            // Aumentar velocidad
+            const incrementoVel = juego.faseDificil ? 0.3 : 0.2;
+            if (frameCount % (juego.faseDificil ? 20 : 25) === 0 && juego.velocidad < (juego.faseDificil ? 28 : 25)) {
                 juego.velocidad += incrementoVel;
                 document.getElementById('speedDisplay').textContent = Math.floor(juego.velocidad * 10) / 10;
             }
 
-            // Spawn más frecuente en fase difícil
-            const intervaloBase = juego.faseDificil ? 12 : 18;
-            const intervalo = Math.max(intervaloBase, 35 - juego.velocidad * 1.0);
+            // Spawn - MANTIENE DISTANCIA
+            const intervaloBase = juego.faseDificil ? 18 : 25;
+            const intervalo = Math.max(intervaloBase, 45 - juego.velocidad * 0.8);
             juego.spawnTimer++;
-            if (juego.spawnTimer > intervalo + Math.random() * (juego.faseDificil ? 10 : 15)) {
+            if (juego.spawnTimer > intervalo + Math.random() * (juego.faseDificil ? 15 : 20)) {
                 juego.spawnTimer = 0;
                 spawnObstaculo();
             }
@@ -796,8 +868,10 @@
                 if (obs.x + obs.ancho < gato.x && !obs.contado) {
                     obs.contado = true;
                     juego.score++;
+                    monedas++;
+                    guardarMonedas();
                     document.getElementById('scoreDisplay').textContent = juego.score;
-                    crearParticulas(gato.x + gato.ancho / 2, gato.y + gato.alto / 2, '#66FF88', 8, 2);
+                    crearParticulas(gato.x + gato.ancho / 2, gato.y + gato.alto / 2, '#FFD700', 8, 2);
                     if (juego.score >= juego.maxScore) {
                         juego.victoria = true;
                         juego.jugando = false;
@@ -814,7 +888,7 @@
             actualizarParticulas();
 
             for (const e of juego.estrellas) {
-                const velEstrella = juego.faseDificil ? 0.35 : 0.2;
+                const velEstrella = juego.faseDificil ? 0.3 : 0.2;
                 e.x -= velEstrella * juego.velocidad * S;
                 if (e.x < 0) e.x = W;
             }
@@ -950,7 +1024,8 @@
             ctx.beginPath();
             ctx.arc(10 * s, 0, 14 * s, 0, Math.PI * 2);
             ctx.fill();
-            ctx.fillStyle = '#66FF88';
+            const skin = getSkinData();
+            ctx.fillStyle = skin.color;
             ctx.font = `${28*s}px Arial`;
             ctx.textAlign = 'center';
             ctx.textBaseline = 'middle';
@@ -1030,7 +1105,7 @@
 
             ctx.fillStyle = '#fff';
             ctx.font = `${18*s}px Arial`;
-            ctx.fillText(`⭐ Puntuación: ${juego.score}`, W / 2, H - 120 * s);
+            ctx.fillText(`⭐ Puntuación: ${juego.score} | 🪙 Monedas: ${monedas}`, W / 2, H - 120 * s);
 
             if (juego.score > juego.record) {
                 ctx.fillStyle = '#FFD700';
@@ -1071,7 +1146,7 @@
         }
 
         // ============================================================
-        // DIBUJO DEL MENÚ Y GAME OVER
+        // MENÚ PRINCIPAL CON TIENDA
         // ============================================================
         function dibujarMenu() {
             const s = S;
@@ -1084,55 +1159,81 @@
             ctx.shadowColor = 'rgba(100,255,150,0.3)';
             ctx.shadowBlur = 40 * s;
             ctx.fillStyle = '#66FF88';
-            ctx.font = `bold ${55*s}px Arial`;
-            ctx.fillText('🐱 GATO MARCIANO', W / 2, 120 * s);
+            ctx.font = `bold ${50*s}px Arial`;
+            ctx.fillText('🐱 GATO MARCIANO', W / 2, 80 * s);
 
             ctx.shadowBlur = 0;
             ctx.fillStyle = '#88ccff';
-            ctx.font = `${22*s}px Arial`;
-            ctx.fillText('🚀 Ayuda al gato verde a llegar a su nave', W / 2, 185 * s);
+            ctx.font = `${18*s}px Arial`;
+            ctx.fillText('🚀 Ayuda al gato a llegar a su nave', W / 2, 135 * s);
 
+            // Mostrar monedas
+            ctx.fillStyle = '#FFD700';
+            ctx.font = `bold ${20*s}px Arial`;
+            ctx.fillText(`🪙 ${monedas} monedas`, W / 2, 180 * s);
+
+            // Skin actual
+            const skinActualData = getSkinData();
             ctx.fillStyle = '#aaa';
-            ctx.font = `${16*s}px Arial`;
-            ctx.fillText('⬆ / ⬇  Moverte entre carriles', W / 2, 235 * s);
-            ctx.fillText('Esquiva los obstáculos y llega a 100 puntos', W / 2, 265 * s);
-            ctx.fillStyle = '#FF6B6B';
             ctx.font = `${14*s}px Arial`;
-            ctx.fillText('⚡ A partir de 80 puntos, ¡velocidad extrema!', W / 2, 295 * s);
+            ctx.fillText(`Skin actual: ${skinActualData.nombre}`, W / 2, 215 * s);
 
-            if (juego.record > 0) {
-                ctx.fillStyle = '#FFD700';
-                ctx.font = `${18*s}px Arial`;
-                ctx.fillText(`🏆 Récord: ${juego.record}`, W / 2, 340 * s);
-            }
+            // Botones
+            const btnW = 180 * s;
+            const btnH = 45 * s;
+            const espaciado = 20 * s;
 
-            const btnX = W / 2 - 100 * s;
-            const btnY = 390 * s;
-            const btnW = 200 * s;
-            const btnH = 55 * s;
+            // Botón JUGAR
+            const btnJugarX = W / 2 - btnW / 2;
+            const btnJugarY = 250 * s;
 
             ctx.shadowColor = 'rgba(100,255,150,0.3)';
             ctx.shadowBlur = 20 * s;
 
-            const grad = ctx.createLinearGradient(btnX, btnY, btnX, btnY + btnH);
-            grad.addColorStop(0, '#33CC55');
-            grad.addColorStop(1, '#1A8C33');
-            ctx.fillStyle = grad;
+            const gradJugar = ctx.createLinearGradient(btnJugarX, btnJugarY, btnJugarX, btnJugarY + btnH);
+            gradJugar.addColorStop(0, '#33CC55');
+            gradJugar.addColorStop(1, '#1A8C33');
+            ctx.fillStyle = gradJugar;
             ctx.beginPath();
-            ctx.roundRect(btnX, btnY, btnW, btnH, 12);
+            ctx.roundRect(btnJugarX, btnJugarY, btnW, btnH, 12);
             ctx.fill();
 
             ctx.shadowBlur = 0;
             ctx.fillStyle = '#fff';
-            ctx.font = `bold ${22*s}px Arial`;
-            ctx.fillText('▶ INICIAR', W / 2, btnY + btnH / 2);
+            ctx.font = `bold ${20*s}px Arial`;
+            ctx.fillText('▶ JUGAR', W / 2, btnJugarY + btnH / 2);
 
-            ctx.fillStyle = 'rgba(255,255,255,0.2)';
-            ctx.font = `${12*s}px Arial`;
-            ctx.fillText('🐱 Velocidad x10 - ¡Prepárate!', W / 2, H - 30 * s);
+            // Botón TIENDA
+            const btnTiendaX = W / 2 - btnW / 2;
+            const btnTiendaY = btnJugarY + btnH + espaciado;
 
-            if (juego.menu) {
-                const handler = (e) => {
+            const gradTienda = ctx.createLinearGradient(btnTiendaX, btnTiendaY, btnTiendaX, btnTiendaY + btnH);
+            gradTienda.addColorStop(0, '#4488FF');
+            gradTienda.addColorStop(1, '#0044AA');
+            ctx.fillStyle = gradTienda;
+            ctx.beginPath();
+            ctx.roundRect(btnTiendaX, btnTiendaY, btnW, btnH, 12);
+            ctx.fill();
+
+            ctx.shadowBlur = 0;
+            ctx.fillStyle = '#fff';
+            ctx.font = `bold ${20*s}px Arial`;
+            ctx.fillText('🛒 TIENDA', W / 2, btnTiendaY + btnH / 2);
+
+            // Récord
+            if (juego.record > 0) {
+                ctx.fillStyle = '#FFD700';
+                ctx.font = `${16*s}px Arial`;
+                ctx.fillText(`🏆 Récord: ${juego.record}`, W / 2, btnTiendaY + btnH + 30 * s);
+            }
+
+            ctx.fillStyle = 'rgba(255,255,255,0.15)';
+            ctx.font = `${11*s}px Arial`;
+            ctx.fillText('🐱 Cada obstáculo = 1 moneda', W / 2, H - 30 * s);
+
+            // Handlers
+            if (juego.menu && !juego.tienda) {
+                const handlerClick = (e) => {
                     const rect = canvas.getBoundingClientRect();
                     let x, y;
                     if (e.type === 'touchstart') {
@@ -1144,18 +1245,236 @@
                         x = e.clientX - rect.left;
                         y = e.clientY - rect.top;
                     }
-                    if (x > btnX && x < btnX + btnW && y > btnY && y < btnY + btnH) {
+
+                    // Botón JUGAR
+                    if (x > btnJugarX && x < btnJugarX + btnW &&
+                        y > btnJugarY && y < btnJugarY + btnH) {
                         juego.menu = false;
-                        canvas.removeEventListener('click', handler);
-                        canvas.removeEventListener('touchstart', handler);
+                        canvas.removeEventListener('click', handlerClick);
+                        canvas.removeEventListener('touchstart', handlerClick);
                         reiniciarJuego();
+                        return;
+                    }
+
+                    // Botón TIENDA
+                    if (x > btnTiendaX && x < btnTiendaX + btnW &&
+                        y > btnTiendaY && y < btnTiendaY + btnH) {
+                        juego.tienda = true;
+                        juego.menu = false;
+                        canvas.removeEventListener('click', handlerClick);
+                        canvas.removeEventListener('touchstart', handlerClick);
                     }
                 };
-                canvas.addEventListener('click', handler);
-                canvas.addEventListener('touchstart', handler);
+                canvas.addEventListener('click', handlerClick);
+                canvas.addEventListener('touchstart', handlerClick);
             }
         }
 
+        // ============================================================
+        // TIENDA DE SKINS
+        // ============================================================
+        function dibujarTienda() {
+            const s = S;
+            ctx.fillStyle = 'rgba(0,0,0,0.85)';
+            ctx.fillRect(0, 0, W, H);
+
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+
+            ctx.shadowColor = 'rgba(100,255,150,0.3)';
+            ctx.shadowBlur = 30 * s;
+            ctx.fillStyle = '#FFD700';
+            ctx.font = `bold ${40*s}px Arial`;
+            ctx.fillText('🛒 TIENDA DE SKINS', W / 2, 60 * s);
+
+            ctx.shadowBlur = 0;
+            ctx.fillStyle = '#fff';
+            ctx.font = `${20*s}px Arial`;
+            ctx.fillText(`🪙 Monedas: ${monedas}`, W / 2, 110 * s);
+
+            // Mostrar skins
+            const skinWidth = W * 0.22;
+            const skinHeight = 150 * s;
+            const totalWidth = SKINS.length * skinWidth + (SKINS.length - 1) * 15 * s;
+            const startX = (W - totalWidth) / 2;
+            const startY = 150 * s;
+
+            for (let i = 0; i < SKINS.length; i++) {
+                const skin = SKINS[i];
+                const x = startX + i * (skinWidth + 15 * s);
+                const y = startY;
+
+                // Fondo de la skin
+                ctx.shadowColor = 'rgba(255,255,255,0.1)';
+                ctx.shadowBlur = 10 * s;
+                ctx.fillStyle = skin.desbloqueado ? 'rgba(255,255,255,0.08)' : 'rgba(50,50,50,0.3)';
+                ctx.beginPath();
+                ctx.roundRect(x, y, skinWidth, skinHeight, 10);
+                ctx.fill();
+
+                // Borde si está seleccionada
+                if (skin.id === skinActual) {
+                    ctx.strokeStyle = '#FFD700';
+                    ctx.lineWidth = 3 * s;
+                    ctx.beginPath();
+                    ctx.roundRect(x, y, skinWidth, skinHeight, 10);
+                    ctx.stroke();
+                }
+
+                ctx.shadowBlur = 0;
+
+                // Color de la skin
+                ctx.fillStyle = skin.color;
+                ctx.font = `${35*s}px Arial`;
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillText('🐱', x + skinWidth / 2, y + 45 * s);
+
+                // Nombre
+                ctx.fillStyle = '#fff';
+                ctx.font = `${12*s}px Arial`;
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillText(skin.nombre, x + skinWidth / 2, y + 85 * s);
+
+                // Estado
+                if (skin.desbloqueado) {
+                    if (skin.id === skinActual) {
+                        ctx.fillStyle = '#4CAF50';
+                        ctx.font = `bold ${12*s}px Arial`;
+                        ctx.fillText('✓ SELECCIONADO', x + skinWidth / 2, y + 110 * s);
+                    } else {
+                        ctx.fillStyle = '#4CAF50';
+                        ctx.font = `${12*s}px Arial`;
+                        ctx.fillText('✅ Desbloqueado', x + skinWidth / 2, y + 110 * s);
+                        // Botón seleccionar
+                        const btnSelX = x + skinWidth / 2 - 40 * s;
+                        const btnSelY = y + 125 * s;
+                        const btnSelW = 80 * s;
+                        const btnSelH = 25 * s;
+                        ctx.fillStyle = '#4488FF';
+                        ctx.beginPath();
+                        ctx.roundRect(btnSelX, btnSelY, btnSelW, btnSelH, 8);
+                        ctx.fill();
+                        ctx.fillStyle = '#fff';
+                        ctx.font = `bold ${9*s}px Arial`;
+                        ctx.textAlign = 'center';
+                        ctx.textBaseline = 'middle';
+                        ctx.fillText('USAR', x + skinWidth / 2, btnSelY + btnSelH / 2);
+                    }
+                } else {
+                    ctx.fillStyle = '#FF6B6B';
+                    ctx.font = `${12*s}px Arial`;
+                    ctx.fillText(`🔒 ${skin.precio} monedas`, x + skinWidth / 2, y + 110 * s);
+                    // Botón comprar
+                    const btnComX = x + skinWidth / 2 - 40 * s;
+                    const btnComY = y + 125 * s;
+                    const btnComW = 80 * s;
+                    const btnComH = 25 * s;
+                    ctx.fillStyle = monedas >= skin.precio ? '#4CAF50' : '#666';
+                    ctx.beginPath();
+                    ctx.roundRect(btnComX, btnComY, btnComW, btnComH, 8);
+                    ctx.fill();
+                    ctx.fillStyle = '#fff';
+                    ctx.font = `bold ${9*s}px Arial`;
+                    ctx.textAlign = 'center';
+                    ctx.textBaseline = 'middle';
+                    ctx.fillText('COMPRAR', x + skinWidth / 2, btnComY + btnComH / 2);
+                }
+            }
+
+            // Botón VOLVER
+            const btnVolverX = W / 2 - 80 * s;
+            const btnVolverY = startY + skinHeight + 30 * s;
+            const btnVolverW = 160 * s;
+            const btnVolverH = 40 * s;
+
+            ctx.shadowColor = 'rgba(255,255,255,0.1)';
+            ctx.shadowBlur = 10 * s;
+            ctx.fillStyle = '#555';
+            ctx.beginPath();
+            ctx.roundRect(btnVolverX, btnVolverY, btnVolverW, btnVolverH, 10);
+            ctx.fill();
+
+            ctx.shadowBlur = 0;
+            ctx.fillStyle = '#fff';
+            ctx.font = `bold ${18*s}px Arial`;
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText('🔙 VOLVER', W / 2, btnVolverY + btnVolverH / 2);
+
+            // Handlers de la tienda
+            const handlerTienda = (e) => {
+                const rect = canvas.getBoundingClientRect();
+                let x, y;
+                if (e.type === 'touchstart') {
+                    const touch = e.touches[0];
+                    x = touch.clientX - rect.left;
+                    y = touch.clientY - rect.top;
+                    e.preventDefault();
+                } else {
+                    x = e.clientX - rect.left;
+                    y = e.clientY - rect.top;
+                }
+
+                // Botón VOLVER
+                if (x > btnVolverX && x < btnVolverX + btnVolverW &&
+                    y > btnVolverY && y < btnVolverY + btnVolverH) {
+                    juego.tienda = false;
+                    juego.menu = true;
+                    canvas.removeEventListener('click', handlerTienda);
+                    canvas.removeEventListener('touchstart', handlerTienda);
+                    return;
+                }
+
+                // Verificar clics en skins
+                for (let i = 0; i < SKINS.length; i++) {
+                    const skin = SKINS[i];
+                    const sx = startX + i * (skinWidth + 15 * s);
+                    const sy = startY;
+
+                    // Botón USAR o COMPRAR
+                    const btnY2 = sy + 125 * s;
+                    const btnX2 = sx + skinWidth / 2 - 40 * s;
+                    const btnW2 = 80 * s;
+                    const btnH2 = 25 * s;
+
+                    if (x > btnX2 && x < btnX2 + btnW2 &&
+                        y > btnY2 && y < btnY2 + btnH2) {
+                        if (skin.desbloqueado && skin.id !== skinActual) {
+                            seleccionarSkin(skin.id);
+                            // Actualizar gato si está en juego
+                            if (gato) {
+                                const newSkin = getSkinData();
+                                gato.color1 = newSkin.color;
+                                gato.color2 = newSkin.color2;
+                                gato.color3 = newSkin.color3;
+                            }
+                        } else if (!skin.desbloqueado) {
+                            if (desbloquearSkin(skin.id)) {
+                                // Actualizar gato si está en juego
+                                if (gato) {
+                                    const newSkin = getSkinData();
+                                    gato.color1 = newSkin.color;
+                                    gato.color2 = newSkin.color2;
+                                    gato.color3 = newSkin.color3;
+                                }
+                            }
+                        }
+                        // Redibujar la tienda
+                        dibujarTienda();
+                        return;
+                    }
+                }
+            };
+
+            canvas.addEventListener('click', handlerTienda);
+            canvas.addEventListener('touchstart', handlerTienda);
+        }
+
+        // ============================================================
+        // DIBUJO DE GAME OVER
+        // ============================================================
         function dibujarGameOver() {
             const s = S;
             ctx.fillStyle = 'rgba(0,0,0,0.8)';
@@ -1168,27 +1487,31 @@
             ctx.font = `bold ${55*s}px Arial`;
             ctx.shadowColor = 'rgba(255,0,0,0.3)';
             ctx.shadowBlur = 30 * s;
-            ctx.fillText('💥 GAME OVER', W / 2, 140 * s);
+            ctx.fillText('💥 GAME OVER', W / 2, 120 * s);
 
             ctx.shadowBlur = 0;
             ctx.fillStyle = '#fff';
-            ctx.font = `${30*s}px Arial`;
-            ctx.fillText(`Puntos: ${juego.score}`, W / 2, 210 * s);
+            ctx.font = `${28*s}px Arial`;
+            ctx.fillText(`Puntos: ${juego.score}`, W / 2, 185 * s);
+
+            ctx.fillStyle = '#FFD700';
+            ctx.font = `${24*s}px Arial`;
+            ctx.fillText(`🪙 Monedas ganadas: ${juego.score}`, W / 2, 230 * s);
 
             if (juego.score > juego.record) {
                 juego.record = juego.score;
                 localStorage.setItem('spaceCatRecord', String(juego.record));
                 ctx.fillStyle = '#FFD700';
-                ctx.font = `bold ${24*s}px Arial`;
-                ctx.fillText('🏆 ¡NUEVO RÉCORD!', W / 2, 265 * s);
+                ctx.font = `bold ${22*s}px Arial`;
+                ctx.fillText('🏆 ¡NUEVO RÉCORD!', W / 2, 280 * s);
             } else {
                 ctx.fillStyle = '#aaa';
-                ctx.font = `${20*s}px Arial`;
-                ctx.fillText(`Récord: ${juego.record}`, W / 2, 265 * s);
+                ctx.font = `${18*s}px Arial`;
+                ctx.fillText(`Récord: ${juego.record}`, W / 2, 280 * s);
             }
 
             const btnX = W / 2 - 100 * s;
-            const btnY = 320 * s;
+            const btnY = 330 * s;
             const btnW = 200 * s;
             const btnH = 50 * s;
 
@@ -1262,16 +1585,14 @@
             }
             ctx.setLineDash([]);
 
-            // Indicador de fase difícil
-            if (juego.faseDificil) {
-                ctx.fillStyle = 'rgba(255,0,0,0.05)';
+            if (juego.faseDificil && juego.jugando) {
+                ctx.fillStyle = 'rgba(255,0,0,0.04)';
                 ctx.fillRect(0, 0, W, H);
-                // Texto de advertencia
-                ctx.fillStyle = 'rgba(255,0,0,0.3)';
-                ctx.font = `bold ${30*s}px Arial`;
+                ctx.fillStyle = 'rgba(255,0,0,0.25)';
+                ctx.font = `bold ${26*s}px Arial`;
                 ctx.textAlign = 'center';
                 ctx.textBaseline = 'top';
-                ctx.fillText('⚡ ¡FASE EXTREMA! ⚡', W / 2, 10 * s);
+                ctx.fillText('⚡ ¡FASE EXTREMA! ⚡', W / 2, 8 * s);
             }
 
             for (const obs of obstaculos) {
@@ -1281,9 +1602,19 @@
             if (gato) gato.dibujar();
             dibujarParticulas();
 
-            if (juego.menu) dibujarMenu();
+            if (juego.menu && !juego.tienda) dibujarMenu();
+            if (juego.tienda) dibujarTienda();
             if (juego.gameOver) dibujarGameOver();
             if (juego.victoria) dibujarVictoria();
+
+            // Mostrar monedas en el juego
+            if (juego.jugando && !juego.gameOver && !juego.victoria) {
+                ctx.fillStyle = '#FFD700';
+                ctx.font = `${14*s}px Arial`;
+                ctx.textAlign = 'right';
+                ctx.textBaseline = 'bottom';
+                ctx.fillText(`🪙 ${monedas}`, W - 20 * s, H - 20 * s);
+            }
         }
 
         // ============================================================
