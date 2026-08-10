@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>🐱 Gato Espacial - Space Cat</title>
+    <title>🐱 Gato Marciano - Space Cat</title>
     <style>
         * {
             margin: 0;
@@ -148,31 +148,31 @@
             score: 0,
             maxScore: 100,
             velocidad: 1,
-            velocidadBase: 2,
+            velocidadBase: 4,
             frame: 0,
             carriles: 3,
             ultimoSpawn: 0,
-            intervaloMin: 80,
-            intervaloMax: 200,
             spawnTimer: 0,
             record: parseInt(localStorage.getItem('spaceCatRecord')) || 0,
             estrellas: []
         };
 
         // ============================================================
-        // CLASE GATO
+        // CLASE GATO MARCIANO
         // ============================================================
         class Gato {
             constructor() {
-                this.carril = 1; // 0, 1, 2
-                this.ancho = 50 * S;
-                this.alto = 60 * S;
+                this.carril = 1;
+                this.ancho = 55 * S;
+                this.alto = 65 * S;
                 this.x = 80 * S;
                 this.y = this.getY();
                 this.animacion = 0;
                 this.parpadeo = 0;
                 this.orejaOffset = 0;
                 this.colaMov = 0;
+                this.patas = 0;
+                this.antenaMov = 0;
             }
 
             getY() {
@@ -185,11 +185,11 @@
                 if (arriba && this.carril > 0) {
                     this.carril--;
                     this.y = this.getY();
-                    crearParticulas(this.x + this.ancho / 2, this.y + this.alto / 2, '#88ccff', 10, 2);
+                    crearParticulas(this.x + this.ancho / 2, this.y + this.alto / 2, '#66ff88', 10, 2);
                 } else if (!arriba && this.carril < 2) {
                     this.carril++;
                     this.y = this.getY();
-                    crearParticulas(this.x + this.ancho / 2, this.y + this.alto / 2, '#88ccff', 10, 2);
+                    crearParticulas(this.x + this.ancho / 2, this.y + this.alto / 2, '#66ff88', 10, 2);
                 }
             }
 
@@ -203,62 +203,96 @@
                 this.animacion += 0.05;
                 this.parpadeo += 0.03;
                 this.colaMov += 0.08;
+                this.patas += 0.06;
+                this.antenaMov += 0.04;
 
                 ctx.save();
 
                 // Sombra
-                ctx.shadowColor = 'rgba(255,200,50,0.2)';
+                ctx.shadowColor = 'rgba(100,255,150,0.2)';
                 ctx.shadowBlur = 30 * s;
 
-                // Cuerpo
+                // ===== CUERPO =====
                 const gradCuerpo = ctx.createRadialGradient(x + w / 2, y + h / 2, 0, x + w / 2, y + h / 2, w);
-                gradCuerpo.addColorStop(0, '#FFB74D');
-                gradCuerpo.addColorStop(0.7, '#F57C00');
-                gradCuerpo.addColorStop(1, '#E65100');
+                gradCuerpo.addColorStop(0, '#66FF88');
+                gradCuerpo.addColorStop(0.6, '#33CC55');
+                gradCuerpo.addColorStop(1, '#1A8C33');
                 ctx.fillStyle = gradCuerpo;
                 ctx.beginPath();
-                ctx.ellipse(x + w / 2, y + h / 2 + 8 * s, w / 2.2, h / 2.8, 0, 0, Math.PI * 2);
+                ctx.ellipse(x + w / 2, y + h / 2 + 8 * s, w / 2.3, h / 2.7, 0, 0, Math.PI * 2);
                 ctx.fill();
 
-                // Cabeza
-                ctx.fillStyle = '#FFB74D';
+                // ===== CABEZA =====
+                ctx.fillStyle = '#66FF88';
                 ctx.beginPath();
-                ctx.arc(x + w / 2, y + h / 3 + 5 * s, w / 2.4, 0, Math.PI * 2);
+                ctx.arc(x + w / 2, y + h / 3 + 5 * s, w / 2.5, 0, Math.PI * 2);
                 ctx.fill();
 
-                // Orejas
-                const orejaMov = Math.sin(this.animacion) * 2 * s;
-                ctx.fillStyle = '#FF8A65';
+                // ===== ANTENAS DE MARCIANITO =====
+                const antMov = Math.sin(this.antenaMov) * 3 * s;
+                ctx.strokeStyle = '#33CC55';
+                ctx.lineWidth = 3 * s;
+                // Antena izquierda
+                ctx.beginPath();
+                ctx.moveTo(x + w / 2 - 10 * s, y + 4 * s);
+                ctx.quadraticCurveTo(x + w / 2 - 18 * s, y - 20 * s + antMov, x + w / 2 - 8 * s, y - 30 * s + antMov);
+                ctx.stroke();
+                // Bolita antena izquierda
+                ctx.fillStyle = '#FF6B6B';
+                ctx.shadowColor = 'rgba(255,100,100,0.4)';
+                ctx.shadowBlur = 15 * s;
+                ctx.beginPath();
+                ctx.arc(x + w / 2 - 8 * s, y - 30 * s + antMov, 5 * s, 0, Math.PI * 2);
+                ctx.fill();
+                
+                // Antena derecha
+                ctx.shadowColor = 'rgba(100,255,150,0.2)';
+                ctx.shadowBlur = 30 * s;
+                ctx.strokeStyle = '#33CC55';
+                ctx.lineWidth = 3 * s;
+                ctx.beginPath();
+                ctx.moveTo(x + w / 2 + 10 * s, y + 4 * s);
+                ctx.quadraticCurveTo(x + w / 2 + 18 * s, y - 20 * s - antMov, x + w / 2 + 8 * s, y - 30 * s - antMov);
+                ctx.stroke();
+                // Bolita antena derecha
+                ctx.fillStyle = '#FF6B6B';
+                ctx.shadowColor = 'rgba(255,100,100,0.4)';
+                ctx.shadowBlur = 15 * s;
+                ctx.beginPath();
+                ctx.arc(x + w / 2 + 8 * s, y - 30 * s - antMov, 5 * s, 0, Math.PI * 2);
+                ctx.fill();
+
+                // ===== OREJAS =====
+                ctx.shadowBlur = 0;
+                ctx.fillStyle = '#44DD66';
                 // Oreja izquierda
                 ctx.beginPath();
-                ctx.moveTo(x + w / 2 - 16 * s, y + 4 * s + orejaMov);
-                ctx.lineTo(x + w / 2 - 28 * s, y - 8 * s + orejaMov);
-                ctx.lineTo(x + w / 2 - 6 * s, y + 2 * s + orejaMov);
+                ctx.moveTo(x + w / 2 - 14 * s, y + 4 * s);
+                ctx.lineTo(x + w / 2 - 26 * s, y - 6 * s);
+                ctx.lineTo(x + w / 2 - 6 * s, y + 2 * s);
                 ctx.fill();
                 // Oreja derecha
                 ctx.beginPath();
-                ctx.moveTo(x + w / 2 + 16 * s, y + 4 * s - orejaMov);
-                ctx.lineTo(x + w / 2 + 28 * s, y - 8 * s - orejaMov);
-                ctx.lineTo(x + w / 2 + 6 * s, y + 2 * s - orejaMov);
+                ctx.moveTo(x + w / 2 + 14 * s, y + 4 * s);
+                ctx.lineTo(x + w / 2 + 26 * s, y - 6 * s);
+                ctx.lineTo(x + w / 2 + 6 * s, y + 2 * s);
                 ctx.fill();
 
                 // Oreja interna
-                ctx.fillStyle = '#FFAB91';
+                ctx.fillStyle = '#88FF99';
                 ctx.beginPath();
-                ctx.moveTo(x + w / 2 - 16 * s, y + 5 * s + orejaMov);
-                ctx.lineTo(x + w / 2 - 24 * s, y - 4 * s + orejaMov);
-                ctx.lineTo(x + w / 2 - 10 * s, y + 3 * s + orejaMov);
+                ctx.moveTo(x + w / 2 - 14 * s, y + 5 * s);
+                ctx.lineTo(x + w / 2 - 22 * s, y - 3 * s);
+                ctx.lineTo(x + w / 2 - 8 * s, y + 3 * s);
                 ctx.fill();
                 ctx.beginPath();
-                ctx.moveTo(x + w / 2 + 16 * s, y + 5 * s - orejaMov);
-                ctx.lineTo(x + w / 2 + 24 * s, y - 4 * s - orejaMov);
-                ctx.lineTo(x + w / 2 + 10 * s, y + 3 * s - orejaMov);
+                ctx.moveTo(x + w / 2 + 14 * s, y + 5 * s);
+                ctx.lineTo(x + w / 2 + 22 * s, y - 3 * s);
+                ctx.lineTo(x + w / 2 + 8 * s, y + 3 * s);
                 ctx.fill();
 
-                // Ojos
+                // ===== OJOS =====
                 const parpadeo = Math.sin(this.parpadeo * 3) > 0.9 ? 0.2 : 1;
-                // Blanco ojos
-                ctx.shadowBlur = 0;
                 ctx.fillStyle = '#FFFFFF';
                 ctx.beginPath();
                 ctx.ellipse(x + w / 2 - 10 * s, y + h / 3 + 6 * s, 8 * s, 9 * s * parpadeo, 0, 0, Math.PI * 2);
@@ -267,8 +301,10 @@
                 ctx.ellipse(x + w / 2 + 10 * s, y + h / 3 + 6 * s, 8 * s, 9 * s * parpadeo, 0, 0, Math.PI * 2);
                 ctx.fill();
 
-                // Iris
-                ctx.fillStyle = '#3E2723';
+                // Iris (verdes brillantes)
+                ctx.fillStyle = '#00FF88';
+                ctx.shadowColor = 'rgba(0,255,136,0.3)';
+                ctx.shadowBlur = 10 * s;
                 const mirar = Math.sin(this.animacion * 0.5) * 3 * s;
                 ctx.beginPath();
                 ctx.arc(x + w / 2 - 10 * s + mirar, y + h / 3 + 8 * s, 5 * s, 0, Math.PI * 2);
@@ -278,7 +314,8 @@
                 ctx.fill();
 
                 // Pupilas
-                ctx.fillStyle = '#1a1a1a';
+                ctx.shadowBlur = 0;
+                ctx.fillStyle = '#0a1a0a';
                 ctx.beginPath();
                 ctx.arc(x + w / 2 - 10 * s + mirar + 2 * s, y + h / 3 + 9 * s, 2.5 * s, 0, Math.PI * 2);
                 ctx.fill();
@@ -295,19 +332,19 @@
                 ctx.arc(x + w / 2 + 8 * s + mirar, y + h / 3 + 5 * s, 2 * s, 0, Math.PI * 2);
                 ctx.fill();
 
-                // Nariz
+                // ===== NARIZ =====
                 ctx.fillStyle = '#FF6B6B';
+                ctx.shadowBlur = 0;
                 ctx.beginPath();
                 ctx.moveTo(x + w / 2, y + h / 3 + 14 * s);
                 ctx.lineTo(x + w / 2 - 4 * s, y + h / 3 + 18 * s);
                 ctx.lineTo(x + w / 2 + 4 * s, y + h / 3 + 18 * s);
                 ctx.fill();
 
-                // Bigotes
-                ctx.strokeStyle = 'rgba(255,255,255,0.6)';
+                // ===== BIGOTES =====
+                ctx.strokeStyle = 'rgba(255,255,255,0.5)';
                 ctx.lineWidth = 1.5 * s;
                 const bigoteY = y + h / 3 + 16 * s;
-                // Izquierdos
                 ctx.beginPath();
                 ctx.moveTo(x + w / 2 - 6 * s, bigoteY);
                 ctx.lineTo(x + w / 2 - 22 * s, bigoteY - 6 * s);
@@ -320,7 +357,6 @@
                 ctx.moveTo(x + w / 2 - 6 * s, bigoteY + 4 * s);
                 ctx.lineTo(x + w / 2 - 22 * s, bigoteY + 8 * s);
                 ctx.stroke();
-                // Derechos
                 ctx.beginPath();
                 ctx.moveTo(x + w / 2 + 6 * s, bigoteY);
                 ctx.lineTo(x + w / 2 + 22 * s, bigoteY - 6 * s);
@@ -334,50 +370,77 @@
                 ctx.lineTo(x + w / 2 + 22 * s, bigoteY + 8 * s);
                 ctx.stroke();
 
-                // Boca
-                ctx.strokeStyle = '#5D4037';
+                // ===== BOCA (sonrisa) =====
+                ctx.strokeStyle = '#2E7D32';
                 ctx.lineWidth = 1.5 * s;
                 ctx.beginPath();
                 ctx.arc(x + w / 2, y + h / 3 + 20 * s, 4 * s, 0.1 * Math.PI, 0.9 * Math.PI);
                 ctx.stroke();
 
-                // Cola
-                ctx.shadowBlur = 10 * s;
-                ctx.shadowColor = 'rgba(255,200,50,0.2)';
-                ctx.fillStyle = '#F57C00';
+                // ===== PATAS =====
+                const paso = Math.sin(this.patas) * 5 * s;
+                ctx.fillStyle = '#44DD66';
+                ctx.shadowBlur = 0;
+                // Pata delantera izquierda
+                ctx.beginPath();
+                ctx.roundRect(x + 4 * s, y + h / 2 + 10 * s + paso, 8 * s, 14 * s, 4 * s);
+                ctx.fill();
+                // Pata delantera derecha
+                ctx.beginPath();
+                ctx.roundRect(x + w - 12 * s, y + h / 2 + 10 * s - paso, 8 * s, 14 * s, 4 * s);
+                ctx.fill();
+                // Pata trasera izquierda
+                ctx.beginPath();
+                ctx.roundRect(x + 2 * s, y + h - 12 * s + paso * 0.5, 9 * s, 12 * s, 4 * s);
+                ctx.fill();
+                // Pata trasera derecha
+                ctx.beginPath();
+                ctx.roundRect(x + w - 11 * s, y + h - 12 * s - paso * 0.5, 9 * s, 12 * s, 4 * s);
+                ctx.fill();
+
+                // Almohadillas de las patas
+                ctx.fillStyle = '#88FF99';
+                ctx.beginPath();
+                ctx.arc(x + 8 * s, y + h / 2 + 18 * s + paso, 3 * s, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.beginPath();
+                ctx.arc(x + w - 8 * s, y + h / 2 + 18 * s - paso, 3 * s, 0, Math.PI * 2);
+                ctx.fill();
+
+                // ===== COLA =====
+                ctx.shadowColor = 'rgba(100,255,150,0.2)';
+                ctx.shadowBlur = 15 * s;
+                ctx.fillStyle = '#44DD66';
                 const colaX = x + w - 2 * s;
-                const colaY = y + h / 2 + 5 * s;
-                const colaAng = Math.sin(this.colaMov) * 0.3 + 0.5;
+                const colaY = y + h / 2 + 10 * s;
+                const colaAng = Math.sin(this.colaMov) * 0.4 + 0.6;
                 ctx.beginPath();
                 ctx.moveTo(colaX, colaY);
                 ctx.quadraticCurveTo(
-                    colaX + 20 * s * Math.cos(colaAng),
-                    colaY - 25 * s * Math.sin(colaAng) - 5 * s,
-                    colaX + 35 * s * Math.cos(colaAng + 0.3),
-                    colaY - 35 * s * Math.sin(colaAng + 0.3) - 10 * s
+                    colaX + 18 * s * Math.cos(colaAng),
+                    colaY - 22 * s * Math.sin(colaAng) - 5 * s,
+                    colaX + 32 * s * Math.cos(colaAng + 0.3),
+                    colaY - 32 * s * Math.sin(colaAng + 0.3) - 10 * s
                 );
-                ctx.lineWidth = 10 * s;
+                ctx.lineWidth = 8 * s;
                 ctx.lineCap = 'round';
                 ctx.stroke();
 
-                ctx.shadowBlur = 0;
+                // Punta de la cola (más clara)
+                ctx.fillStyle = '#88FF99';
+                ctx.beginPath();
+                ctx.arc(
+                    colaX + 32 * s * Math.cos(colaAng + 0.3),
+                    colaY - 32 * s * Math.sin(colaAng + 0.3) - 10 * s,
+                    5 * s, 0, Math.PI * 2
+                );
+                ctx.fill();
 
-                // Rayas del gato
-                ctx.fillStyle = 'rgba(230, 120, 20, 0.3)';
+                // ===== RAYAS DEL GATO =====
+                ctx.shadowBlur = 0;
+                ctx.fillStyle = 'rgba(30, 160, 60, 0.3)';
                 ctx.fillRect(x + w / 2 - 12 * s, y + h / 3 + 24 * s, 24 * s, 4 * s);
                 ctx.fillRect(x + w / 2 - 14 * s, y + h / 3 + 30 * s, 28 * s, 3 * s);
-
-                // Casco espacial (visera)
-                ctx.strokeStyle = 'rgba(100, 200, 255, 0.3)';
-                ctx.lineWidth = 2 * s;
-                ctx.beginPath();
-                ctx.arc(x + w / 2, y + h / 3 + 4 * s, w / 2.2 + 6 * s, 0, Math.PI * 2);
-                ctx.stroke();
-                // Brillo del casco
-                ctx.fillStyle = 'rgba(255,255,255,0.05)';
-                ctx.beginPath();
-                ctx.arc(x + w / 2 - 12 * s, y + h / 3 - 2 * s, 12 * s, 0, Math.PI * 2);
-                ctx.fill();
 
                 ctx.restore();
             }
@@ -391,17 +454,23 @@
                 const s = S;
                 this.carril = carril;
                 this.tipo = tipo || randInt(0, 2);
-                this.ancho = 25 * s;
-                this.alto = 25 * s;
-                this.x = W + 20 * s;
+                this.ancho = 28 * s;
+                this.alto = 28 * s;
+                this.x = W + 30 * s;
                 this.y = this.getY();
-                this.velocidad = (juego.velocidadBase + juego.velocidad * 0.3) * s;
+                this.velocidad = (juego.velocidadBase + juego.velocidad * 0.5) * s;
                 this.rotacion = 0;
                 this.vida = true;
-                this.colores = ['#FF6B6B', '#4ECDC4', '#45B7D1', '#FFA94D', '#A8E6CF'];
-                this.color = this.colores[randInt(0, 4)];
-                this.formas = ['meteorito', 'asteroide', 'basura', 'satelite'];
-                this.forma = this.formas[randInt(0, 3)];
+                this.contado = false;
+                this.colores = ['#FF6B6B', '#4ECDC4', '#45B7D1', '#FFA94D', '#A8E6CF', '#FF6B35', '#7C4DFF'];
+                this.color = this.colores[randInt(0, 6)];
+                this.formas = ['meteorito', 'asteroide', 'basura', 'satelite', 'ovni'];
+                this.forma = this.formas[randInt(0, 4)];
+                // Tamaño variable
+                if (Math.random() < 0.2) {
+                    this.ancho *= 1.4;
+                    this.alto *= 1.4;
+                }
             }
 
             getY() {
@@ -412,8 +481,8 @@
 
             mover() {
                 this.x -= this.velocidad;
-                this.rotacion += 0.05;
-                if (this.x < -50 * S) {
+                this.rotacion += 0.08;
+                if (this.x < -60 * S) {
                     this.vida = false;
                 }
             }
@@ -430,10 +499,9 @@
                 ctx.rotate(this.rotacion);
 
                 ctx.shadowColor = 'rgba(255,200,100,0.3)';
-                ctx.shadowBlur = 15 * s;
+                ctx.shadowBlur = 20 * s;
 
                 if (this.forma === 'meteorito') {
-                    // Meteorito - forma irregular
                     ctx.fillStyle = this.color;
                     ctx.beginPath();
                     const puntos = 8;
@@ -445,7 +513,6 @@
                     }
                     ctx.closePath();
                     ctx.fill();
-                    // Cráteres
                     ctx.fillStyle = 'rgba(0,0,0,0.15)';
                     ctx.beginPath();
                     ctx.arc(-4 * s, -4 * s, 6 * s, 0, Math.PI * 2);
@@ -454,7 +521,6 @@
                     ctx.arc(6 * s, 5 * s, 4 * s, 0, Math.PI * 2);
                     ctx.fill();
                 } else if (this.forma === 'asteroide') {
-                    // Asteroide - más angular
                     ctx.fillStyle = this.color;
                     ctx.beginPath();
                     const pts = 6;
@@ -470,35 +536,57 @@
                     ctx.lineWidth = 1 * s;
                     ctx.stroke();
                 } else if (this.forma === 'basura') {
-                    // Basura espacial - rectangular
                     ctx.fillStyle = this.color;
                     ctx.fillRect(-w / 2, -h / 2, w, h);
                     ctx.fillStyle = 'rgba(255,255,255,0.1)';
                     ctx.fillRect(-w / 2 + 4 * s, -h / 2 + 4 * s, w / 2, h / 2);
-                    ctx.fillRect(-w / 2 + 4 * s, -h / 2 + 4 * s, w / 2, h / 2);
-                } else {
-                    // Satélite
+                } else if (this.forma === 'satelite') {
                     ctx.fillStyle = this.color;
                     ctx.fillRect(-w / 2, -h / 6, w, h / 3);
-                    // Paneles solares
                     ctx.fillStyle = '#4ECDC4';
-                    ctx.fillRect(-w / 2 - 10 * s, -h / 3, 8 * s, h * 0.8);
-                    ctx.fillRect(w / 2 + 2 * s, -h / 3, 8 * s, h * 0.8);
-                    // Antena
+                    ctx.fillRect(-w / 2 - 12 * s, -h / 3, 8 * s, h * 0.8);
+                    ctx.fillRect(w / 2 + 4 * s, -h / 3, 8 * s, h * 0.8);
                     ctx.strokeStyle = '#FFD93D';
                     ctx.lineWidth = 2 * s;
                     ctx.beginPath();
                     ctx.moveTo(0, -h / 6);
-                    ctx.lineTo(0, -h / 2 - 10 * s);
+                    ctx.lineTo(0, -h / 2 - 12 * s);
                     ctx.stroke();
                     ctx.beginPath();
-                    ctx.arc(0, -h / 2 - 10 * s, 4 * s, 0, Math.PI * 2);
+                    ctx.arc(0, -h / 2 - 12 * s, 4 * s, 0, Math.PI * 2);
+                    ctx.fill();
+                } else {
+                    // OVNI
+                    ctx.fillStyle = '#7C4DFF';
+                    ctx.beginPath();
+                    ctx.ellipse(0, 0, w / 1.5, h / 3, 0, 0, Math.PI * 2);
+                    ctx.fill();
+                    ctx.fillStyle = '#B388FF';
+                    ctx.beginPath();
+                    ctx.ellipse(0, -h / 4, w / 2.5, h / 4, 0, 0, Math.PI * 2);
+                    ctx.fill();
+                    ctx.fillStyle = '#FFD93D';
+                    ctx.beginPath();
+                    ctx.arc(0, -h / 4, 4 * s, 0, Math.PI * 2);
+                    ctx.fill();
+                    // Luces del OVNI
+                    ctx.fillStyle = '#FF6B6B';
+                    ctx.beginPath();
+                    ctx.arc(-w / 3, 2 * s, 3 * s, 0, Math.PI * 2);
+                    ctx.fill();
+                    ctx.fillStyle = '#4ECDC4';
+                    ctx.beginPath();
+                    ctx.arc(0, 3 * s, 3 * s, 0, Math.PI * 2);
+                    ctx.fill();
+                    ctx.fillStyle = '#FFD93D';
+                    ctx.beginPath();
+                    ctx.arc(w / 3, 2 * s, 3 * s, 0, Math.PI * 2);
                     ctx.fill();
                 }
 
                 // Brillo
                 ctx.shadowBlur = 0;
-                ctx.fillStyle = 'rgba(255,255,255,0.15)';
+                ctx.fillStyle = 'rgba(255,255,255,0.12)';
                 ctx.beginPath();
                 ctx.arc(-w / 4, -h / 4, w / 6, 0, Math.PI * 2);
                 ctx.fill();
@@ -569,13 +657,14 @@
         // ============================================================
         function crearEstrellas() {
             juego.estrellas = [];
-            for (let i = 0; i < 100; i++) {
+            for (let i = 0; i < 120; i++) {
                 juego.estrellas.push({
                     x: Math.random() * W,
                     y: Math.random() * H,
-                    r: 0.5 + Math.random() * 2,
+                    r: 0.5 + Math.random() * 2.5,
                     brillo: 0.3 + Math.random() * 0.7,
-                    velocidad: 0.2 + Math.random() * 0.5
+                    velocidad: 0.2 + Math.random() * 0.8,
+                    color: ['#FFFFFF', '#FFD93D', '#88CCFF', '#FF6B6B'][randInt(0, 3)]
                 });
             }
         }
@@ -584,12 +673,15 @@
             for (const e of juego.estrellas) {
                 const b = 0.5 + 0.5 * Math.sin(Date.now() / 1000 * e.velocidad + e.x);
                 ctx.globalAlpha = e.brillo * b;
-                ctx.fillStyle = '#FFFFFF';
+                ctx.fillStyle = e.color;
+                ctx.shadowColor = e.color;
+                ctx.shadowBlur = 5 * S;
                 ctx.beginPath();
                 ctx.arc(e.x, e.y, e.r * S, 0, Math.PI * 2);
                 ctx.fill();
             }
             ctx.globalAlpha = 1;
+            ctx.shadowBlur = 0;
         }
 
         // ============================================================
@@ -611,7 +703,6 @@
         let teclas = {};
         let spawnTimer = 0;
         let frameCount = 0;
-        let velocidadIncremento = 0;
 
         // ============================================================
         // FUNCIONES DEL JUEGO
@@ -623,16 +714,13 @@
             particulas = [];
             juego.score = 0;
             juego.velocidad = 1;
-            juego.velocidadBase = 2 * s;
+            juego.velocidadBase = 5 * s;
             juego.gameOver = false;
             juego.victoria = false;
             juego.jugando = true;
             juego.menu = false;
             spawnTimer = 0;
             frameCount = 0;
-            velocidadIncremento = 0;
-            juego.ultimoSpawn = 0;
-            juego.spawnTimer = 0;
             document.getElementById('scoreDisplay').textContent = '0';
             document.getElementById('speedDisplay').textContent = '1';
             crearEstrellas();
@@ -642,21 +730,14 @@
             const carrilesDisponibles = [];
             for (let i = 0; i < 3; i++) carrilesDisponibles.push(i);
 
-            // A partir de 30 puntos, pueden venir 2 obstáculos
-            const numObstaculos = juego.score > 30 && Math.random() < 0.3 ? 2 : 1;
+            const numObstaculos = juego.score > 30 && Math.random() < 0.35 ? 2 : 1;
 
             for (let i = 0; i < numObstaculos; i++) {
                 if (carrilesDisponibles.length === 0) break;
                 const idx = randInt(0, carrilesDisponibles.length - 1);
                 const carril = carrilesDisponibles[idx];
                 carrilesDisponibles.splice(idx, 1);
-                const obs = new Obstaculo(carril);
-                // A veces obstáculos más grandes
-                if (juego.score > 40 && Math.random() < 0.2) {
-                    obs.ancho *= 1.5;
-                    obs.alto *= 1.5;
-                }
-                obstaculos.push(obs);
+                obstaculos.push(new Obstaculo(carril));
             }
         }
 
@@ -666,16 +747,16 @@
             frameCount++;
             const s = S;
 
-            // Aumentar velocidad gradualmente
-            if (frameCount % 60 === 0 && juego.velocidad < 5) {
-                juego.velocidad += 0.02;
+            // Aumentar velocidad más rápido
+            if (frameCount % 45 === 0 && juego.velocidad < 6) {
+                juego.velocidad += 0.03;
                 document.getElementById('speedDisplay').textContent = Math.floor(juego.velocidad * 10) / 10;
             }
 
-            // Spawn de obstáculos
-            const intervalo = Math.max(30, 80 - juego.velocidad * 5);
+            // Spawn de obstáculos - más espaciados
+            const intervalo = Math.max(50, 120 - juego.velocidad * 4);
             juego.spawnTimer++;
-            if (juego.spawnTimer > intervalo + Math.random() * 40) {
+            if (juego.spawnTimer > intervalo + Math.random() * 60) {
                 juego.spawnTimer = 0;
                 spawnObstaculo();
             }
@@ -688,52 +769,44 @@
                     obstaculos.splice(i, 1);
                     continue;
                 }
-                // Colisión con gato
                 if (obs.colisiona(gato)) {
                     juego.gameOver = true;
                     juego.jugando = false;
                     crearParticulas(gato.x + gato.ancho / 2, gato.y + gato.alto / 2, '#FF6B6B', 30, 5);
                     return;
                 }
-                // Puntuación si pasa
                 if (obs.x + obs.ancho < gato.x && !obs.contado) {
                     obs.contado = true;
                     juego.score++;
                     document.getElementById('scoreDisplay').textContent = juego.score;
-                    crearParticulas(gato.x + gato.ancho / 2, gato.y + gato.alto / 2, '#FFD700', 8, 2);
-                    // Victoria
+                    crearParticulas(gato.x + gato.ancho / 2, gato.y + gato.alto / 2, '#66FF88', 8, 2);
                     if (juego.score >= juego.maxScore) {
                         juego.victoria = true;
                         juego.jugando = false;
-                        // Guardar récord
                         if (juego.score > juego.record) {
                             juego.record = juego.score;
                             localStorage.setItem('spaceCatRecord', String(juego.record));
                         }
-                        // Fiesta de doritos
-                        for (let i = 0; i < 50; i++) {
+                        for (let i = 0; i < 60; i++) {
                             setTimeout(() => {
                                 crearParticulas(
                                     rand(50 * s, W - 50 * s),
                                     rand(50 * s, H - 50 * s),
-                                    ['#FF6B35', '#F7C948', '#FF4444', '#4CAF50', '#FFD700'][randInt(0, 4)],
-                                    15, 5
+                                    ['#FF6B35', '#F7C948', '#FF4444', '#4CAF50', '#FFD700', '#66FF88', '#FF6B6B'][randInt(0, 6)],
+                                    15, 6
                                 );
-                            }, i * 80);
+                            }, i * 60);
                         }
                         return;
                     }
                 }
             }
 
-            // Limpiar obstáculos muy lejos
             obstaculos = obstaculos.filter(o => o.x > -100 * s);
-
             actualizarParticulas();
 
-            // Mover estrellas lentamente
             for (const e of juego.estrellas) {
-                e.x -= 0.1 * juego.velocidad * S;
+                e.x -= 0.15 * juego.velocidad * S;
                 if (e.x < 0) e.x = W;
             }
         }
@@ -746,7 +819,7 @@
             ctx.clearRect(0, 0, W, H);
 
             // Fondo espacial
-            const grad = ctx.createRadialGradient(W / 2, H / 2, 0, W / 2, H / 2, Math.max(W, H));
+            const grad = ctx.createRadialGradient(W / 2, H / 2, 0, W / 2, H / 2, Math.max(W, H) * 1.2);
             grad.addColorStop(0, '#0a0a2a');
             grad.addColorStop(0.5, '#05051a');
             grad.addColorStop(1, '#000008');
@@ -756,25 +829,25 @@
             // Estrellas
             dibujarEstrellas();
 
-            // Nebulosas sutiles
-            ctx.globalAlpha = 0.03;
-            for (let i = 0; i < 3; i++) {
+            // Nebulosas
+            ctx.globalAlpha = 0.04;
+            for (let i = 0; i < 4; i++) {
                 const grad2 = ctx.createRadialGradient(
-                    W * (0.2 + i * 0.3), H * (0.3 + i * 0.2), 0,
-                    W * (0.2 + i * 0.3), H * (0.3 + i * 0.2), W * 0.4
+                    W * (0.1 + i * 0.27), H * (0.2 + i * 0.2), 0,
+                    W * (0.1 + i * 0.27), H * (0.2 + i * 0.2), W * 0.5
                 );
-                const colores = ['#4ECDC4', '#FF6B6B', '#45B7D1'];
-                grad2.addColorStop(0, colores[i % 3]);
+                const colores = ['#4ECDC4', '#FF6B6B', '#45B7D1', '#B388FF'];
+                grad2.addColorStop(0, colores[i % 4]);
                 grad2.addColorStop(1, 'transparent');
                 ctx.fillStyle = grad2;
                 ctx.fillRect(0, 0, W, H);
             }
             ctx.globalAlpha = 1;
 
-            // Carriles (líneas guía sutiles)
-            ctx.strokeStyle = 'rgba(255,255,255,0.05)';
-            ctx.lineWidth = 1 * s;
-            ctx.setLineDash([5 * s, 10 * s]);
+            // Carriles
+            ctx.strokeStyle = 'rgba(255,255,255,0.04)';
+            ctx.lineWidth = 2 * s;
+            ctx.setLineDash([8 * s, 15 * s]);
             const espacioTotal = H - 100 * s;
             const altoCarril = espacioTotal / 3;
             for (let i = 1; i < 3; i++) {
@@ -797,63 +870,52 @@
             // Partículas
             dibujarParticulas();
 
-            // Menú
             if (juego.menu) dibujarMenu();
-
-            // Game Over
             if (juego.gameOver) dibujarGameOver();
-
-            // Victoria
             if (juego.victoria) dibujarVictoria();
         }
 
         function dibujarMenu() {
             const s = S;
-            ctx.fillStyle = 'rgba(0,0,0,0.6)';
+            ctx.fillStyle = 'rgba(0,0,0,0.7)';
             ctx.fillRect(0, 0, W, H);
 
             ctx.textAlign = 'center';
             ctx.textBaseline = 'middle';
 
-            // Título
-            ctx.shadowColor = 'rgba(255,200,50,0.3)';
+            ctx.shadowColor = 'rgba(100,255,150,0.3)';
             ctx.shadowBlur = 40 * s;
-            ctx.fillStyle = '#FFD93D';
+            ctx.fillStyle = '#66FF88';
             ctx.font = `bold ${55*s}px Arial`;
-            ctx.fillText('🐱 GATO ESPACIAL', W / 2, 120 * s);
+            ctx.fillText('🐱 GATO MARCIANO', W / 2, 120 * s);
 
             ctx.shadowBlur = 0;
-
-            // Subtítulo
             ctx.fillStyle = '#88ccff';
             ctx.font = `${22*s}px Arial`;
-            ctx.fillText('🚀 Ayuda al gato a llegar a su nave', W / 2, 185 * s);
+            ctx.fillText('🚀 Ayuda al gato verde a llegar a su nave', W / 2, 185 * s);
 
-            // Instrucciones
             ctx.fillStyle = '#aaa';
             ctx.font = `${16*s}px Arial`;
             ctx.fillText('⬆ / ⬇  Moverte entre carriles', W / 2, 235 * s);
             ctx.fillText('Esquiva los obstáculos y llega a 100 puntos', W / 2, 265 * s);
 
-            // Récord
             if (juego.record > 0) {
                 ctx.fillStyle = '#FFD700';
                 ctx.font = `${18*s}px Arial`;
                 ctx.fillText(`🏆 Récord: ${juego.record}`, W / 2, 320 * s);
             }
 
-            // Botón iniciar
             const btnX = W / 2 - 100 * s;
             const btnY = 370 * s;
             const btnW = 200 * s;
             const btnH = 55 * s;
 
-            ctx.shadowColor = 'rgba(0,200,255,0.3)';
+            ctx.shadowColor = 'rgba(100,255,150,0.3)';
             ctx.shadowBlur = 20 * s;
 
             const grad = ctx.createLinearGradient(btnX, btnY, btnX, btnY + btnH);
-            grad.addColorStop(0, '#4488FF');
-            grad.addColorStop(1, '#0044AA');
+            grad.addColorStop(0, '#33CC55');
+            grad.addColorStop(1, '#1A8C33');
             ctx.fillStyle = grad;
             ctx.beginPath();
             ctx.roundRect(btnX, btnY, btnW, btnH, 12);
@@ -866,9 +928,8 @@
 
             ctx.fillStyle = 'rgba(255,255,255,0.2)';
             ctx.font = `${12*s}px Arial`;
-            ctx.fillText('🐱 Lleva al gato de vuelta a casa', W / 2, H - 30 * s);
+            ctx.fillText('🐱 El gato verde con antenitas te espera', W / 2, H - 30 * s);
 
-            // Click handler
             if (juego.menu) {
                 const handler = (e) => {
                     const rect = canvas.getBoundingClientRect();
@@ -896,7 +957,7 @@
 
         function dibujarGameOver() {
             const s = S;
-            ctx.fillStyle = 'rgba(0,0,0,0.75)';
+            ctx.fillStyle = 'rgba(0,0,0,0.8)';
             ctx.fillRect(0, 0, W, H);
 
             ctx.textAlign = 'center';
@@ -930,12 +991,12 @@
             const btnW = 200 * s;
             const btnH = 50 * s;
 
-            ctx.shadowColor = 'rgba(0,200,255,0.3)';
+            ctx.shadowColor = 'rgba(100,255,150,0.3)';
             ctx.shadowBlur = 20 * s;
 
             const grad = ctx.createLinearGradient(btnX, btnY, btnX, btnY + btnH);
-            grad.addColorStop(0, '#4488FF');
-            grad.addColorStop(1, '#0044AA');
+            grad.addColorStop(0, '#33CC55');
+            grad.addColorStop(1, '#1A8C33');
             ctx.fillStyle = grad;
             ctx.beginPath();
             ctx.roundRect(btnX, btnY, btnW, btnH, 12);
@@ -964,74 +1025,79 @@
             ctx.textAlign = 'center';
             ctx.textBaseline = 'middle';
 
-            // Fuego artificial (doritos volando)
-            ctx.shadowColor = 'rgba(255,200,50,0.5)';
+            ctx.shadowColor = 'rgba(100,255,150,0.5)';
             ctx.shadowBlur = 50 * s;
 
-            ctx.fillStyle = '#FFD93D';
+            ctx.fillStyle = '#66FF88';
             ctx.font = `bold ${50*s}px Arial`;
-            ctx.fillText('🎉 ¡MISIÓN CUMPLIDA! 🎉', W / 2, 120 * s);
+            ctx.fillText('🎉 ¡MISIÓN CUMPLIDA! 🎉', W / 2, 110 * s);
 
             ctx.shadowBlur = 0;
             ctx.fillStyle = '#88ff88';
             ctx.font = `${28*s}px Arial`;
-            ctx.fillText('🐱 El gato llegó a su nave', W / 2, 190 * s);
+            ctx.fillText('🐱 El gato marciano llegó a su nave', W / 2, 180 * s);
 
             ctx.fillStyle = '#FFA94D';
             ctx.font = `${24*s}px Arial`;
-            ctx.fillText('🍟 ¡Y se comió unos Doritos! 🍟', W / 2, 240 * s);
+            ctx.fillText('🍟 ¡Y se comió unos Doritos! 🍟', W / 2, 230 * s);
 
             ctx.fillStyle = '#fff';
             ctx.font = `${22*s}px Arial`;
-            ctx.fillText(`⭐ Puntuación: ${juego.score}`, W / 2, 295 * s);
+            ctx.fillText(`⭐ Puntuación: ${juego.score}`, W / 2, 285 * s);
 
             if (juego.score > juego.record) {
                 juego.record = juego.score;
                 localStorage.setItem('spaceCatRecord', String(juego.record));
                 ctx.fillStyle = '#FFD700';
                 ctx.font = `bold ${24*s}px Arial`;
-                ctx.fillText('🏆 ¡NUEVO RÉCORD MUNDIAL!', W / 2, 340 * s);
+                ctx.fillText('🏆 ¡NUEVO RÉCORD MUNDIAL!', W / 2, 330 * s);
             } else {
                 ctx.fillStyle = '#aaa';
                 ctx.font = `${18*s}px Arial`;
-                ctx.fillText(`🏆 Récord: ${juego.record}`, W / 2, 340 * s);
+                ctx.fillText(`🏆 Récord: ${juego.record}`, W / 2, 330 * s);
             }
 
-            // Dibujar nave espacial pequeña
+            // Nave espacial
             const naveX = W / 2;
-            const naveY = 410 * s;
+            const naveY = 400 * s;
             ctx.save();
             ctx.translate(naveX, naveY);
+            ctx.shadowColor = 'rgba(100,200,255,0.3)';
+            ctx.shadowBlur = 30 * s;
             ctx.fillStyle = '#45B7D1';
             ctx.beginPath();
-            ctx.moveTo(0, -30 * s);
-            ctx.lineTo(-25 * s, 20 * s);
-            ctx.lineTo(25 * s, 20 * s);
+            ctx.moveTo(0, -35 * s);
+            ctx.lineTo(-30 * s, 22 * s);
+            ctx.lineTo(30 * s, 22 * s);
             ctx.closePath();
             ctx.fill();
             ctx.fillStyle = '#FFD93D';
             ctx.beginPath();
-            ctx.arc(0, 5 * s, 10 * s, 0, Math.PI * 2);
+            ctx.arc(0, 5 * s, 12 * s, 0, Math.PI * 2);
             ctx.fill();
             ctx.fillStyle = '#FF6B6B';
-            ctx.fillRect(-8 * s, 20 * s, 16 * s, 8 * s);
+            ctx.fillRect(-10 * s, 22 * s, 20 * s, 10 * s);
+            // Ventana
+            ctx.fillStyle = '#88CCFF';
+            ctx.beginPath();
+            ctx.arc(0, 0, 8 * s, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.fillStyle = '#66FF88';
+            ctx.font = `${25*s}px Arial`;
+            ctx.fillText('🐱', 0, 2 * s);
             ctx.restore();
 
-            // Gato feliz en la nave
-            ctx.font = `${30*s}px Arial`;
-            ctx.fillText('🐱', naveX - 2 * s, naveY + 3 * s);
-
             const btnX = W / 2 - 100 * s;
-            const btnY = 480 * s;
+            const btnY = 490 * s;
             const btnW = 200 * s;
             const btnH = 50 * s;
 
-            ctx.shadowColor = 'rgba(0,200,255,0.3)';
+            ctx.shadowColor = 'rgba(100,255,150,0.3)';
             ctx.shadowBlur = 20 * s;
 
             const grad = ctx.createLinearGradient(btnX, btnY, btnX, btnY + btnH);
-            grad.addColorStop(0, '#4488FF');
-            grad.addColorStop(1, '#0044AA');
+            grad.addColorStop(0, '#33CC55');
+            grad.addColorStop(1, '#1A8C33');
             ctx.fillStyle = grad;
             ctx.beginPath();
             ctx.roundRect(btnX, btnY, btnW, btnH, 12);
@@ -1067,7 +1133,6 @@
             }
         });
 
-        // Controles táctiles
         document.getElementById('btnUp').addEventListener('touchstart', (e) => {
             e.preventDefault();
             if (gato && juego.jugando) gato.mover(true);
