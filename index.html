@@ -150,14 +150,12 @@
         let monedas = parseInt(localStorage.getItem('spaceCatMonedas')) || 0;
         let skinActual = localStorage.getItem('spaceCatSkin') || 'verde';
 
-        // Cargar desbloqueos guardados
         SKINS.forEach(skin => {
             const key = 'spaceCatSkin_' + skin.id;
             if (localStorage.getItem(key) === 'true') {
                 skin.desbloqueado = true;
             }
         });
-        // Asegurar que la skin verde siempre está desbloqueada
         SKINS[0].desbloqueado = true;
 
         function guardarMonedas() {
@@ -213,11 +211,12 @@
             doritosAnim: 0,
             naveAnim: 0,
             faseDificil: false,
-            skinSeleccionada: skinActual
+            skinSeleccionada: skinActual,
+            carrilesOcupados: []
         };
 
         // ============================================================
-        // CLASE GATO - CON COLORES DINÁMICOS
+        // CLASE GATO
         // ============================================================
         class Gato {
             constructor() {
@@ -281,7 +280,6 @@
                 ctx.shadowColor = c1 + '33';
                 ctx.shadowBlur = 30 * s;
 
-                // Cuerpo
                 const gradCuerpo = ctx.createRadialGradient(x + w / 2, y + h / 2, 0, x + w / 2, y + h / 2, w);
                 gradCuerpo.addColorStop(0, c1);
                 gradCuerpo.addColorStop(0.6, c2);
@@ -291,13 +289,11 @@
                 ctx.ellipse(x + w / 2, y + h / 2 + 8 * s, w / 2.3, h / 2.7, 0, 0, Math.PI * 2);
                 ctx.fill();
 
-                // Cabeza
                 ctx.fillStyle = c1;
                 ctx.beginPath();
                 ctx.arc(x + w / 2, y + h / 3 + 5 * s, w / 2.5, 0, Math.PI * 2);
                 ctx.fill();
 
-                // Antenas
                 const antMov = Math.sin(this.antenaMov) * 3 * s;
                 ctx.strokeStyle = c2;
                 ctx.lineWidth = 3 * s;
@@ -327,7 +323,6 @@
                 ctx.arc(x + w / 2 + 8 * s, y - 30 * s - antMov, 5 * s, 0, Math.PI * 2);
                 ctx.fill();
 
-                // Orejas
                 ctx.shadowBlur = 0;
                 ctx.fillStyle = c2;
                 ctx.beginPath();
@@ -353,7 +348,6 @@
                 ctx.lineTo(x + w / 2 + 8 * s, y + 3 * s);
                 ctx.fill();
 
-                // Ojos
                 const parpadeo = Math.sin(this.parpadeo * 3) > 0.9 ? 0.2 : 1;
                 ctx.fillStyle = '#FFFFFF';
                 ctx.beginPath();
@@ -391,7 +385,6 @@
                 ctx.arc(x + w / 2 + 8 * s + mirar, y + h / 3 + 5 * s, 2 * s, 0, Math.PI * 2);
                 ctx.fill();
 
-                // Nariz
                 ctx.fillStyle = '#FF6B6B';
                 ctx.shadowBlur = 0;
                 ctx.beginPath();
@@ -400,7 +393,6 @@
                 ctx.lineTo(x + w / 2 + 4 * s, y + h / 3 + 18 * s);
                 ctx.fill();
 
-                // Bigotes
                 ctx.strokeStyle = 'rgba(255,255,255,0.5)';
                 ctx.lineWidth = 1.5 * s;
                 const bigoteY = y + h / 3 + 16 * s;
@@ -429,7 +421,6 @@
                 ctx.lineTo(x + w / 2 + 22 * s, bigoteY + 8 * s);
                 ctx.stroke();
 
-                // Boca
                 ctx.strokeStyle = '#2E7D32';
                 ctx.lineWidth = 1.5 * s;
                 if (this.comiendo) {
@@ -447,7 +438,6 @@
                     ctx.stroke();
                 }
 
-                // Patas
                 const paso = Math.sin(this.patas) * 5 * s;
                 ctx.fillStyle = c2;
                 ctx.shadowBlur = 0;
@@ -472,7 +462,6 @@
                 ctx.arc(x + w - 8 * s, y + h / 2 + 18 * s - paso, 3 * s, 0, Math.PI * 2);
                 ctx.fill();
 
-                // Cola
                 ctx.shadowColor = c1 + '33';
                 ctx.shadowBlur = 15 * s;
                 ctx.fillStyle = c2;
@@ -500,7 +489,6 @@
                 );
                 ctx.fill();
 
-                // Rayas
                 ctx.shadowBlur = 0;
                 ctx.fillStyle = c3 + '33';
                 ctx.fillRect(x + w / 2 - 12 * s, y + h / 3 + 24 * s, 24 * s, 4 * s);
@@ -628,7 +616,6 @@
                     ctx.arc(0, -h / 2 - 12 * s, 4 * s, 0, Math.PI * 2);
                     ctx.fill();
                 } else {
-                    // OVNI
                     ctx.fillStyle = '#7C4DFF';
                     ctx.shadowColor = 'rgba(150,100,255,0.3)';
                     ctx.shadowBlur = 20 * s;
@@ -796,6 +783,7 @@
             juego.doritosAnim = 0;
             juego.naveAnim = 0;
             juego.faseDificil = false;
+            juego.carrilesOcupados = [];
             spawnTimer = 0;
             frameCount = 0;
             document.getElementById('scoreDisplay').textContent = '0';
@@ -804,18 +792,48 @@
         }
 
         function spawnObstaculo() {
+            // Máximo 2 obstáculos a la vez, nunca en los 3 carriles
+            const maxObstaculos = juego.faseDificil ? 2 : 2;
+            
+            // Verificar cuántos carriles ya tienen obstáculos
+            const carrilesConObs = new Set();
+            for (const obs of obstaculos) {
+                if (obs.x > 50 * S && obs.x < W * 0.8) {
+                    carrilesConObs.add(obs.carril);
+                }
+            }
+            
+            // Carriles disponibles (los que no tienen obstáculos cerca)
             const carrilesDisponibles = [];
-            for (let i = 0; i < 3; i++) carrilesDisponibles.push(i);
-
-            const maxObstaculos = juego.faseDificil ? 3 : 2;
-            const numObstaculos = juego.score > 25 ? Math.min(1 + Math.floor(Math.random() * maxObstaculos), maxObstaculos) : 1;
-
+            for (let i = 0; i < 3; i++) {
+                if (!carrilesConObs.has(i)) {
+                    carrilesDisponibles.push(i);
+                }
+            }
+            
+            // Si no hay carriles disponibles, no spawnear
+            if (carrilesDisponibles.length === 0) return;
+            
+            // Número de obstáculos a spawnear (1 o 2)
+            const numObstaculos = Math.min(
+                carrilesDisponibles.length,
+                Math.random() < 0.4 ? 2 : 1
+            );
+            
+            // Seleccionar carriles aleatorios
+            const carrilesSeleccionados = [];
             for (let i = 0; i < numObstaculos; i++) {
                 if (carrilesDisponibles.length === 0) break;
                 const idx = randInt(0, carrilesDisponibles.length - 1);
-                const carril = carrilesDisponibles[idx];
+                carrilesSeleccionados.push(carrilesDisponibles[idx]);
                 carrilesDisponibles.splice(idx, 1);
+            }
+            
+            // Crear obstáculos en los carriles seleccionados
+            for (const carril of carrilesSeleccionados) {
                 const obs = new Obstaculo(carril);
+                // Darle un ligero retraso para que no estén perfectamente alineados
+                obs.x += rand(-20 * S, 20 * S);
                 obstaculos.push(obs);
             }
         }
@@ -842,9 +860,9 @@
                 document.getElementById('speedDisplay').textContent = Math.floor(juego.velocidad * 10) / 10;
             }
 
-            // Spawn - MANTIENE DISTANCIA
-            const intervaloBase = juego.faseDificil ? 18 : 25;
-            const intervalo = Math.max(intervaloBase, 45 - juego.velocidad * 0.8);
+            // Spawn - más espaciado
+            const intervaloBase = juego.faseDificil ? 20 : 28;
+            const intervalo = Math.max(intervaloBase, 50 - juego.velocidad * 0.6);
             juego.spawnTimer++;
             if (juego.spawnTimer > intervalo + Math.random() * (juego.faseDificil ? 15 : 20)) {
                 juego.spawnTimer = 0;
@@ -925,7 +943,6 @@
             ctx.fillStyle = 'rgba(0,0,0,0.85)';
             ctx.fillRect(0, 0, W, H);
 
-            // Planeta Gatito World
             const planetaX = W * 0.7;
             const planetaY = H * 0.45 + Math.sin(juego.victoriaAnim * 0.3) * 10 * s;
             const planetaR = Math.min(W, H) * 0.22;
@@ -979,7 +996,6 @@
             ctx.textBaseline = 'middle';
             ctx.fillText('🐱 GATITO WORLD 🌍', planetaX, planetaY - planetaR - 40 * s);
 
-            // Nave espacial
             const naveX = W * 0.25 + Math.sin(juego.naveAnim * 0.5) * 30 * s;
             const naveY = H * 0.5 + Math.sin(juego.naveAnim * 0.7) * 20 * s;
             const naveEscala = 1 + Math.sin(juego.naveAnim * 0.3) * 0.05;
@@ -1146,7 +1162,7 @@
         }
 
         // ============================================================
-        // MENÚ PRINCIPAL CON TIENDA
+        // MENÚ PRINCIPAL Y TIENDA
         // ============================================================
         function dibujarMenu() {
             const s = S;
@@ -1167,23 +1183,19 @@
             ctx.font = `${18*s}px Arial`;
             ctx.fillText('🚀 Ayuda al gato a llegar a su nave', W / 2, 135 * s);
 
-            // Mostrar monedas
             ctx.fillStyle = '#FFD700';
             ctx.font = `bold ${20*s}px Arial`;
             ctx.fillText(`🪙 ${monedas} monedas`, W / 2, 180 * s);
 
-            // Skin actual
             const skinActualData = getSkinData();
             ctx.fillStyle = '#aaa';
             ctx.font = `${14*s}px Arial`;
             ctx.fillText(`Skin actual: ${skinActualData.nombre}`, W / 2, 215 * s);
 
-            // Botones
             const btnW = 180 * s;
             const btnH = 45 * s;
             const espaciado = 20 * s;
 
-            // Botón JUGAR
             const btnJugarX = W / 2 - btnW / 2;
             const btnJugarY = 250 * s;
 
@@ -1203,7 +1215,6 @@
             ctx.font = `bold ${20*s}px Arial`;
             ctx.fillText('▶ JUGAR', W / 2, btnJugarY + btnH / 2);
 
-            // Botón TIENDA
             const btnTiendaX = W / 2 - btnW / 2;
             const btnTiendaY = btnJugarY + btnH + espaciado;
 
@@ -1220,7 +1231,6 @@
             ctx.font = `bold ${20*s}px Arial`;
             ctx.fillText('🛒 TIENDA', W / 2, btnTiendaY + btnH / 2);
 
-            // Récord
             if (juego.record > 0) {
                 ctx.fillStyle = '#FFD700';
                 ctx.font = `${16*s}px Arial`;
@@ -1231,7 +1241,6 @@
             ctx.font = `${11*s}px Arial`;
             ctx.fillText('🐱 Cada obstáculo = 1 moneda', W / 2, H - 30 * s);
 
-            // Handlers
             if (juego.menu && !juego.tienda) {
                 const handlerClick = (e) => {
                     const rect = canvas.getBoundingClientRect();
@@ -1246,7 +1255,6 @@
                         y = e.clientY - rect.top;
                     }
 
-                    // Botón JUGAR
                     if (x > btnJugarX && x < btnJugarX + btnW &&
                         y > btnJugarY && y < btnJugarY + btnH) {
                         juego.menu = false;
@@ -1256,7 +1264,6 @@
                         return;
                     }
 
-                    // Botón TIENDA
                     if (x > btnTiendaX && x < btnTiendaX + btnW &&
                         y > btnTiendaY && y < btnTiendaY + btnH) {
                         juego.tienda = true;
@@ -1270,9 +1277,6 @@
             }
         }
 
-        // ============================================================
-        // TIENDA DE SKINS
-        // ============================================================
         function dibujarTienda() {
             const s = S;
             ctx.fillStyle = 'rgba(0,0,0,0.85)';
@@ -1292,7 +1296,6 @@
             ctx.font = `${20*s}px Arial`;
             ctx.fillText(`🪙 Monedas: ${monedas}`, W / 2, 110 * s);
 
-            // Mostrar skins
             const skinWidth = W * 0.22;
             const skinHeight = 150 * s;
             const totalWidth = SKINS.length * skinWidth + (SKINS.length - 1) * 15 * s;
@@ -1304,7 +1307,6 @@
                 const x = startX + i * (skinWidth + 15 * s);
                 const y = startY;
 
-                // Fondo de la skin
                 ctx.shadowColor = 'rgba(255,255,255,0.1)';
                 ctx.shadowBlur = 10 * s;
                 ctx.fillStyle = skin.desbloqueado ? 'rgba(255,255,255,0.08)' : 'rgba(50,50,50,0.3)';
@@ -1312,7 +1314,6 @@
                 ctx.roundRect(x, y, skinWidth, skinHeight, 10);
                 ctx.fill();
 
-                // Borde si está seleccionada
                 if (skin.id === skinActual) {
                     ctx.strokeStyle = '#FFD700';
                     ctx.lineWidth = 3 * s;
@@ -1323,21 +1324,18 @@
 
                 ctx.shadowBlur = 0;
 
-                // Color de la skin
                 ctx.fillStyle = skin.color;
                 ctx.font = `${35*s}px Arial`;
                 ctx.textAlign = 'center';
                 ctx.textBaseline = 'middle';
                 ctx.fillText('🐱', x + skinWidth / 2, y + 45 * s);
 
-                // Nombre
                 ctx.fillStyle = '#fff';
                 ctx.font = `${12*s}px Arial`;
                 ctx.textAlign = 'center';
                 ctx.textBaseline = 'middle';
                 ctx.fillText(skin.nombre, x + skinWidth / 2, y + 85 * s);
 
-                // Estado
                 if (skin.desbloqueado) {
                     if (skin.id === skinActual) {
                         ctx.fillStyle = '#4CAF50';
@@ -1347,7 +1345,6 @@
                         ctx.fillStyle = '#4CAF50';
                         ctx.font = `${12*s}px Arial`;
                         ctx.fillText('✅ Desbloqueado', x + skinWidth / 2, y + 110 * s);
-                        // Botón seleccionar
                         const btnSelX = x + skinWidth / 2 - 40 * s;
                         const btnSelY = y + 125 * s;
                         const btnSelW = 80 * s;
@@ -1366,7 +1363,6 @@
                     ctx.fillStyle = '#FF6B6B';
                     ctx.font = `${12*s}px Arial`;
                     ctx.fillText(`🔒 ${skin.precio} monedas`, x + skinWidth / 2, y + 110 * s);
-                    // Botón comprar
                     const btnComX = x + skinWidth / 2 - 40 * s;
                     const btnComY = y + 125 * s;
                     const btnComW = 80 * s;
@@ -1383,7 +1379,6 @@
                 }
             }
 
-            // Botón VOLVER
             const btnVolverX = W / 2 - 80 * s;
             const btnVolverY = startY + skinHeight + 30 * s;
             const btnVolverW = 160 * s;
@@ -1403,7 +1398,6 @@
             ctx.textBaseline = 'middle';
             ctx.fillText('🔙 VOLVER', W / 2, btnVolverY + btnVolverH / 2);
 
-            // Handlers de la tienda
             const handlerTienda = (e) => {
                 const rect = canvas.getBoundingClientRect();
                 let x, y;
@@ -1417,7 +1411,6 @@
                     y = e.clientY - rect.top;
                 }
 
-                // Botón VOLVER
                 if (x > btnVolverX && x < btnVolverX + btnVolverW &&
                     y > btnVolverY && y < btnVolverY + btnVolverH) {
                     juego.tienda = false;
@@ -1427,13 +1420,11 @@
                     return;
                 }
 
-                // Verificar clics en skins
                 for (let i = 0; i < SKINS.length; i++) {
                     const skin = SKINS[i];
                     const sx = startX + i * (skinWidth + 15 * s);
                     const sy = startY;
 
-                    // Botón USAR o COMPRAR
                     const btnY2 = sy + 125 * s;
                     const btnX2 = sx + skinWidth / 2 - 40 * s;
                     const btnW2 = 80 * s;
@@ -1443,7 +1434,6 @@
                         y > btnY2 && y < btnY2 + btnH2) {
                         if (skin.desbloqueado && skin.id !== skinActual) {
                             seleccionarSkin(skin.id);
-                            // Actualizar gato si está en juego
                             if (gato) {
                                 const newSkin = getSkinData();
                                 gato.color1 = newSkin.color;
@@ -1452,7 +1442,6 @@
                             }
                         } else if (!skin.desbloqueado) {
                             if (desbloquearSkin(skin.id)) {
-                                // Actualizar gato si está en juego
                                 if (gato) {
                                     const newSkin = getSkinData();
                                     gato.color1 = newSkin.color;
@@ -1461,7 +1450,6 @@
                                 }
                             }
                         }
-                        // Redibujar la tienda
                         dibujarTienda();
                         return;
                     }
@@ -1472,9 +1460,6 @@
             canvas.addEventListener('touchstart', handlerTienda);
         }
 
-        // ============================================================
-        // DIBUJO DE GAME OVER
-        // ============================================================
         function dibujarGameOver() {
             const s = S;
             ctx.fillStyle = 'rgba(0,0,0,0.8)';
@@ -1607,7 +1592,6 @@
             if (juego.gameOver) dibujarGameOver();
             if (juego.victoria) dibujarVictoria();
 
-            // Mostrar monedas en el juego
             if (juego.jugando && !juego.gameOver && !juego.victoria) {
                 ctx.fillStyle = '#FFD700';
                 ctx.font = `${14*s}px Arial`;
