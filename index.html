@@ -155,7 +155,9 @@
             record: parseInt(localStorage.getItem('spaceCatRecord')) || 0,
             estrellas: [],
             victoriaAnim: 0,
-            doritosAnim: 0
+            doritosAnim: 0,
+            naveAnim: 0,
+            planetaY: 0
         };
 
         // ============================================================
@@ -175,6 +177,9 @@
                 this.antenaMov = 0;
                 this.comiendo = false;
                 this.comerAnim = 0;
+                this.enNave = false;
+                this.naveX = 0;
+                this.naveY = 0;
             }
 
             getY() {
@@ -213,11 +218,10 @@
 
                 ctx.save();
 
-                // Sombra
                 ctx.shadowColor = 'rgba(100,255,150,0.2)';
                 ctx.shadowBlur = 30 * s;
 
-                // ===== CUERPO =====
+                // Cuerpo
                 const gradCuerpo = ctx.createRadialGradient(x + w / 2, y + h / 2, 0, x + w / 2, y + h / 2, w);
                 gradCuerpo.addColorStop(0, '#66FF88');
                 gradCuerpo.addColorStop(0.6, '#33CC55');
@@ -227,13 +231,13 @@
                 ctx.ellipse(x + w / 2, y + h / 2 + 8 * s, w / 2.3, h / 2.7, 0, 0, Math.PI * 2);
                 ctx.fill();
 
-                // ===== CABEZA =====
+                // Cabeza
                 ctx.fillStyle = '#66FF88';
                 ctx.beginPath();
                 ctx.arc(x + w / 2, y + h / 3 + 5 * s, w / 2.5, 0, Math.PI * 2);
                 ctx.fill();
 
-                // ===== ANTENAS =====
+                // Antenas
                 const antMov = Math.sin(this.antenaMov) * 3 * s;
                 ctx.strokeStyle = '#33CC55';
                 ctx.lineWidth = 3 * s;
@@ -247,7 +251,7 @@
                 ctx.beginPath();
                 ctx.arc(x + w / 2 - 8 * s, y - 30 * s + antMov, 5 * s, 0, Math.PI * 2);
                 ctx.fill();
-                
+
                 ctx.shadowColor = 'rgba(100,255,150,0.2)';
                 ctx.shadowBlur = 30 * s;
                 ctx.strokeStyle = '#33CC55';
@@ -263,7 +267,7 @@
                 ctx.arc(x + w / 2 + 8 * s, y - 30 * s - antMov, 5 * s, 0, Math.PI * 2);
                 ctx.fill();
 
-                // ===== OREJAS =====
+                // Orejas
                 ctx.shadowBlur = 0;
                 ctx.fillStyle = '#44DD66';
                 ctx.beginPath();
@@ -289,7 +293,7 @@
                 ctx.lineTo(x + w / 2 + 8 * s, y + 3 * s);
                 ctx.fill();
 
-                // ===== OJOS =====
+                // Ojos
                 const parpadeo = Math.sin(this.parpadeo * 3) > 0.9 ? 0.2 : 1;
                 ctx.fillStyle = '#FFFFFF';
                 ctx.beginPath();
@@ -327,7 +331,7 @@
                 ctx.arc(x + w / 2 + 8 * s + mirar, y + h / 3 + 5 * s, 2 * s, 0, Math.PI * 2);
                 ctx.fill();
 
-                // ===== NARIZ =====
+                // Nariz
                 ctx.fillStyle = '#FF6B6B';
                 ctx.shadowBlur = 0;
                 ctx.beginPath();
@@ -336,7 +340,7 @@
                 ctx.lineTo(x + w / 2 + 4 * s, y + h / 3 + 18 * s);
                 ctx.fill();
 
-                // ===== BIGOTES =====
+                // Bigotes
                 ctx.strokeStyle = 'rgba(255,255,255,0.5)';
                 ctx.lineWidth = 1.5 * s;
                 const bigoteY = y + h / 3 + 16 * s;
@@ -365,11 +369,10 @@
                 ctx.lineTo(x + w / 2 + 22 * s, bigoteY + 8 * s);
                 ctx.stroke();
 
-                // ===== BOCA =====
+                // Boca
                 ctx.strokeStyle = '#2E7D32';
                 ctx.lineWidth = 1.5 * s;
                 if (this.comiendo) {
-                    // Boca abierta comiendo
                     ctx.fillStyle = '#2E7D32';
                     ctx.beginPath();
                     ctx.arc(x + w / 2, y + h / 3 + 20 * s, 6 * s, 0, Math.PI);
@@ -384,7 +387,7 @@
                     ctx.stroke();
                 }
 
-                // ===== PATAS =====
+                // Patas
                 const paso = Math.sin(this.patas) * 5 * s;
                 ctx.fillStyle = '#44DD66';
                 ctx.shadowBlur = 0;
@@ -409,7 +412,7 @@
                 ctx.arc(x + w - 8 * s, y + h / 2 + 18 * s - paso, 3 * s, 0, Math.PI * 2);
                 ctx.fill();
 
-                // ===== COLA =====
+                // Cola
                 ctx.shadowColor = 'rgba(100,255,150,0.2)';
                 ctx.shadowBlur = 15 * s;
                 ctx.fillStyle = '#44DD66';
@@ -437,7 +440,7 @@
                 );
                 ctx.fill();
 
-                // ===== RAYAS =====
+                // Rayas
                 ctx.shadowBlur = 0;
                 ctx.fillStyle = 'rgba(30, 160, 60, 0.3)';
                 ctx.fillRect(x + w / 2 - 12 * s, y + h / 3 + 24 * s, 24 * s, 4 * s);
@@ -448,10 +451,10 @@
         }
 
         // ============================================================
-        // CLASE OBSTÁCULO - MÁS RÁPIDO
+        // CLASE OBSTÁCULO
         // ============================================================
         class Obstaculo {
-            constructor(carril, tipo) {
+            constructor(carril, tipo, esNave = false) {
                 const s = S;
                 this.carril = carril;
                 this.tipo = tipo || randInt(0, 2);
@@ -463,13 +466,23 @@
                 this.rotacion = 0;
                 this.vida = true;
                 this.contado = false;
+                this.esNave = esNave;
                 this.colores = ['#FF6B6B', '#4ECDC4', '#45B7D1', '#FFA94D', '#A8E6CF', '#FF6B35', '#7C4DFF'];
                 this.color = this.colores[randInt(0, 6)];
                 this.formas = ['meteorito', 'asteroide', 'basura', 'satelite', 'ovni'];
                 this.forma = this.formas[randInt(0, 4)];
+                this.tiempoDisparo = 0;
+                this.disparos = [];
                 if (Math.random() < 0.15) {
                     this.ancho *= 1.5;
                     this.alto *= 1.5;
+                }
+                if (esNave) {
+                    this.ancho = 35 * s;
+                    this.alto = 30 * s;
+                    this.velocidad *= 0.7;
+                    this.color = '#45B7D1';
+                    this.forma = 'nave';
                 }
             }
 
@@ -484,6 +497,33 @@
                 this.rotacion += 0.1;
                 if (this.x < -60 * S) {
                     this.vida = false;
+                }
+                // Disparos de nave
+                if (this.esNave && this.x < W * 0.7 && this.x > 50 * S) {
+                    this.tiempoDisparo++;
+                    if (this.tiempoDisparo > 40 + Math.random() * 30) {
+                        this.tiempoDisparo = 0;
+                        // Dispara a carriles aleatorios
+                        const carrilObj = randInt(0, 2);
+                        const s = S;
+                        this.disparos.push({
+                            x: this.x - 10 * s,
+                            y: 50 * S + carrilObj * ((H - 100 * S) / 3) + ((H - 100 * S) / 3) / 2,
+                            w: 8 * s,
+                            h: 8 * s,
+                            vel: 8 * s,
+                            carril: carrilObj
+                        });
+                        crearParticulas(this.x, this.y, '#FF6B6B', 5, 2);
+                    }
+                }
+                // Mover disparos
+                for (let i = this.disparos.length - 1; i >= 0; i--) {
+                    const d = this.disparos[i];
+                    d.x -= d.vel;
+                    if (d.x < -20 * s) {
+                        this.disparos.splice(i, 1);
+                    }
                 }
             }
 
@@ -501,8 +541,46 @@
                 ctx.shadowColor = 'rgba(255,200,100,0.3)';
                 ctx.shadowBlur = 20 * s;
 
-                if (this.forma === 'meteorito') {
+                if (this.forma === 'nave') {
+                    // Nave enemiga
+                    ctx.fillStyle = '#45B7D1';
+                    ctx.shadowColor = 'rgba(100,200,255,0.5)';
+                    ctx.shadowBlur = 30 * s;
+                    ctx.beginPath();
+                    ctx.moveTo(w / 2, 0);
+                    ctx.lineTo(-w / 3, -h / 2);
+                    ctx.lineTo(-w / 2, -h / 3);
+                    ctx.lineTo(-w / 2, h / 3);
+                    ctx.lineTo(-w / 3, h / 2);
+                    ctx.closePath();
+                    ctx.fill();
+                    // Ala izquierda
+                    ctx.fillStyle = '#4ECDC4';
+                    ctx.fillRect(-w / 2, -h / 4, -w / 4, h / 2);
+                    // Ala derecha
+                    ctx.fillRect(-w / 3, -h / 4, -w / 4, h / 2);
+                    // Ventana
+                    ctx.fillStyle = '#FFD93D';
+                    ctx.beginPath();
+                    ctx.arc(-w / 6, 0, 8 * s, 0, Math.PI * 2);
+                    ctx.fill();
+                    ctx.fillStyle = '#88CCFF';
+                    ctx.beginPath();
+                    ctx.arc(-w / 6, 0, 5 * s, 0, Math.PI * 2);
+                    ctx.fill();
+                    // Luces
+                    ctx.fillStyle = '#FF6B6B';
+                    ctx.beginPath();
+                    ctx.arc(w / 3, -h / 3, 3 * s, 0, Math.PI * 2);
+                    ctx.fill();
+                    ctx.fillStyle = '#4ECDC4';
+                    ctx.beginPath();
+                    ctx.arc(w / 3, h / 3, 3 * s, 0, Math.PI * 2);
+                    ctx.fill();
+                } else if (this.forma === 'meteorito') {
                     ctx.fillStyle = this.color;
+                    ctx.shadowColor = 'rgba(255,200,100,0.3)';
+                    ctx.shadowBlur = 20 * s;
                     ctx.beginPath();
                     const puntos = 8;
                     for (let i = 0; i < puntos; i++) {
@@ -522,6 +600,8 @@
                     ctx.fill();
                 } else if (this.forma === 'asteroide') {
                     ctx.fillStyle = this.color;
+                    ctx.shadowColor = 'rgba(255,200,100,0.3)';
+                    ctx.shadowBlur = 20 * s;
                     ctx.beginPath();
                     const pts = 6;
                     for (let i = 0; i < pts; i++) {
@@ -537,11 +617,15 @@
                     ctx.stroke();
                 } else if (this.forma === 'basura') {
                     ctx.fillStyle = this.color;
+                    ctx.shadowColor = 'rgba(255,200,100,0.3)';
+                    ctx.shadowBlur = 20 * s;
                     ctx.fillRect(-w / 2, -h / 2, w, h);
                     ctx.fillStyle = 'rgba(255,255,255,0.1)';
                     ctx.fillRect(-w / 2 + 4 * s, -h / 2 + 4 * s, w / 2, h / 2);
                 } else if (this.forma === 'satelite') {
                     ctx.fillStyle = this.color;
+                    ctx.shadowColor = 'rgba(255,200,100,0.3)';
+                    ctx.shadowBlur = 20 * s;
                     ctx.fillRect(-w / 2, -h / 6, w, h / 3);
                     ctx.fillStyle = '#4ECDC4';
                     ctx.fillRect(-w / 2 - 12 * s, -h / 3, 8 * s, h * 0.8);
@@ -556,7 +640,10 @@
                     ctx.arc(0, -h / 2 - 12 * s, 4 * s, 0, Math.PI * 2);
                     ctx.fill();
                 } else {
+                    // OVNI
                     ctx.fillStyle = '#7C4DFF';
+                    ctx.shadowColor = 'rgba(150,100,255,0.3)';
+                    ctx.shadowBlur = 20 * s;
                     ctx.beginPath();
                     ctx.ellipse(0, 0, w / 1.5, h / 3, 0, 0, Math.PI * 2);
                     ctx.fill();
@@ -582,6 +669,7 @@
                     ctx.fill();
                 }
 
+                // Brillo
                 ctx.shadowBlur = 0;
                 ctx.fillStyle = 'rgba(255,255,255,0.12)';
                 ctx.beginPath();
@@ -589,6 +677,21 @@
                 ctx.fill();
 
                 ctx.restore();
+
+                // Dibujar disparos
+                for (const d of this.disparos) {
+                    ctx.shadowColor = 'rgba(255,0,0,0.5)';
+                    ctx.shadowBlur = 15 * s;
+                    ctx.fillStyle = '#FF1744';
+                    ctx.beginPath();
+                    ctx.arc(d.x, d.y, d.w / 2, 0, Math.PI * 2);
+                    ctx.fill();
+                    ctx.fillStyle = '#FF6B6B';
+                    ctx.beginPath();
+                    ctx.arc(d.x - 2 * s, d.y - 2 * s, d.w / 4, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+                ctx.shadowBlur = 0;
             }
 
             colisiona(gato) {
@@ -600,6 +703,14 @@
                 const dist = Math.hypot(gx - ox, gy - oy);
                 const radioGato = Math.min(gato.ancho, gato.alto) / 2.5;
                 const radioObs = Math.min(this.ancho, this.alto) / 2;
+                
+                // Colisión con disparos
+                for (const d of this.disparos) {
+                    const distD = Math.hypot(gx - d.x, gy - d.y);
+                    if (distD < radioGato + d.w / 2) {
+                        return true;
+                    }
+                }
                 return dist < radioGato + radioObs;
             }
         }
@@ -718,6 +829,8 @@
             juego.menu = false;
             juego.victoriaAnim = 0;
             juego.doritosAnim = 0;
+            juego.naveAnim = 0;
+            juego.planetaY = H;
             spawnTimer = 0;
             frameCount = 0;
             document.getElementById('scoreDisplay').textContent = '0';
@@ -729,6 +842,8 @@
             const carrilesDisponibles = [];
             for (let i = 0; i < 3; i++) carrilesDisponibles.push(i);
 
+            // A partir de 40 puntos, pueden venir naves
+            const puedeNave = juego.score > 40 && Math.random() < 0.15;
             const numObstaculos = juego.score > 25 && Math.random() < 0.4 ? 2 : 1;
 
             for (let i = 0; i < numObstaculos; i++) {
@@ -736,7 +851,8 @@
                 const idx = randInt(0, carrilesDisponibles.length - 1);
                 const carril = carrilesDisponibles[idx];
                 carrilesDisponibles.splice(idx, 1);
-                const obs = new Obstaculo(carril);
+                const esNave = puedeNave && i === 0 && Math.random() < 0.5;
+                const obs = new Obstaculo(carril, null, esNave);
                 obstaculos.push(obs);
             }
         }
@@ -747,16 +863,16 @@
             frameCount++;
             const s = S;
 
-            // Aumentar velocidad muy rápido
-            if (frameCount % 30 === 0 && juego.velocidad < 25) {
-                juego.velocidad += 0.15;
+            // Aumentar velocidad
+            if (frameCount % 25 === 0 && juego.velocidad < 25) {
+                juego.velocidad += 0.2;
                 document.getElementById('speedDisplay').textContent = Math.floor(juego.velocidad * 10) / 10;
             }
 
-            // Spawn más rápido pero más espaciado
-            const intervalo = Math.max(30, 70 - juego.velocidad * 1.5);
+            // Spawn más frecuente
+            const intervalo = Math.max(20, 50 - juego.velocidad * 1.2);
             juego.spawnTimer++;
-            if (juego.spawnTimer > intervalo + Math.random() * 30) {
+            if (juego.spawnTimer > intervalo + Math.random() * 20) {
                 juego.spawnTimer = 0;
                 spawnObstaculo();
             }
@@ -802,21 +918,22 @@
         }
 
         // ============================================================
-        // ANIMACIÓN DE VICTORIA - GATO COMIENDO DORITOS
+        // ANIMACIÓN DE VICTORIA - GATO VOLANDO A GATITO WORLD
         // ============================================================
         let doritos = [];
+        let planetaVisible = false;
 
         function crearDoritos() {
             const s = S;
             doritos = [];
-            for (let i = 0; i < 30; i++) {
+            for (let i = 0; i < 40; i++) {
                 doritos.push({
-                    x: rand(W * 0.2, W * 0.8),
-                    y: rand(H * 0.3, H * 0.7),
-                    r: rand(8 * s, 20 * s),
-                    color: ['#FF6B35', '#F7C948', '#FF4444', '#FF8C00', '#FFD700'][randInt(0, 4)],
-                    vx: rand(-1, 1) * s,
-                    vy: rand(-2, -0.5) * s,
+                    x: rand(W * 0.1, W * 0.9),
+                    y: rand(H * 0.2, H * 0.8),
+                    r: rand(8 * s, 22 * s),
+                    color: ['#FF6B35', '#F7C948', '#FF4444', '#FF8C00', '#FFD700', '#66FF88'][randInt(0, 5)],
+                    vx: rand(-1.5, 1.5) * s,
+                    vy: rand(-3, -0.5) * s,
                     rot: rand(0, Math.PI * 2),
                     rotV: rand(-0.05, 0.05)
                 });
@@ -825,36 +942,165 @@
 
         function dibujarVictoria() {
             const s = S;
-            
-            // Fondo festivo
-            ctx.fillStyle = 'rgba(0,0,0,0.75)';
-            ctx.fillRect(0, 0, W, H);
-
-            // Efecto de fuegos artificiales (doritos volando)
             juego.victoriaAnim += 0.02;
             juego.doritosAnim += 0.05;
+            juego.naveAnim += 0.015;
 
-            // Doritos volando
+            // Fondo con planeta
+            ctx.fillStyle = 'rgba(0,0,0,0.85)';
+            ctx.fillRect(0, 0, W, H);
+
+            // Planeta Gatito World
+            const planetaX = W * 0.7;
+            const planetaY = H * 0.45 + Math.sin(juego.victoriaAnim * 0.3) * 10 * s;
+            const planetaR = Math.min(W, H) * 0.22;
+
+            // Atmósfera del planeta
+            ctx.shadowColor = 'rgba(100,255,200,0.3)';
+            ctx.shadowBlur = 60 * s;
+            const gradPlaneta = ctx.createRadialGradient(planetaX - planetaR * 0.3, planetaY - planetaR * 0.3, 0, planetaX, planetaY, planetaR * 1.2);
+            gradPlaneta.addColorStop(0, '#88FFAA');
+            gradPlaneta.addColorStop(0.3, '#44DD66');
+            gradPlaneta.addColorStop(0.7, '#1A8C33');
+            gradPlaneta.addColorStop(1, '#0a4a1a');
+            ctx.fillStyle = gradPlaneta;
+            ctx.beginPath();
+            ctx.arc(planetaX, planetaY, planetaR, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Anillos del planeta (como Saturno pero verde)
+            ctx.shadowBlur = 0;
+            ctx.strokeStyle = 'rgba(100,255,150,0.15)';
+            ctx.lineWidth = 8 * s;
+            ctx.beginPath();
+            ctx.ellipse(planetaX, planetaY, planetaR * 1.6, planetaR * 0.5, 0.2, 0, Math.PI * 2);
+            ctx.stroke();
+            ctx.strokeStyle = 'rgba(100,255,150,0.08)';
+            ctx.lineWidth = 4 * s;
+            ctx.beginPath();
+            ctx.ellipse(planetaX, planetaY, planetaR * 1.9, planetaR * 0.4, -0.1, 0, Math.PI * 2);
+            ctx.stroke();
+
+            // Huellas de patitas en el planeta
+            ctx.fillStyle = 'rgba(255,255,255,0.05)';
+            for (let i = 0; i < 8; i++) {
+                const ang = i * Math.PI / 4 + juego.victoriaAnim * 0.2;
+                const dist = planetaR * 0.6 + Math.sin(i * 1.5) * planetaR * 0.2;
+                const px = planetaX + Math.cos(ang) * dist;
+                const py = planetaY + Math.sin(ang) * dist * 0.8;
+                ctx.beginPath();
+                ctx.arc(px, py, 4 * s, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.beginPath();
+                ctx.arc(px + 8 * s, py + 4 * s, 4 * s, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.beginPath();
+                ctx.arc(px - 8 * s, py + 4 * s, 4 * s, 0, Math.PI * 2);
+                ctx.fill();
+            }
+
+            // Texto del planeta
+            ctx.shadowBlur = 20 * s;
+            ctx.shadowColor = 'rgba(100,255,150,0.3)';
+            ctx.fillStyle = '#FFD93D';
+            ctx.font = `bold ${28*s}px Arial`;
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText('🐱 GATITO WORLD 🌍', planetaX, planetaY - planetaR - 40 * s);
+
+            // Nave espacial con el gato - ANIMADA
+            const naveX = W * 0.25 + Math.sin(juego.naveAnim * 0.5) * 30 * s;
+            const naveY = H * 0.5 + Math.sin(juego.naveAnim * 0.7) * 20 * s;
+            const naveEscala = 1 + Math.sin(juego.naveAnim * 0.3) * 0.05;
+
+            ctx.save();
+            ctx.translate(naveX, naveY);
+            ctx.scale(naveEscala, naveEscala);
+
+            // Estela de la nave
+            for (let i = 0; i < 3; i++) {
+                const alpha = 0.3 - i * 0.1;
+                const size = (15 - i * 4) * s;
+                ctx.globalAlpha = alpha;
+                ctx.fillStyle = '#FFD93D';
+                ctx.beginPath();
+                ctx.arc(-30 * s - i * 20 * s, 0, size, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.fillStyle = '#FF6B6B';
+                ctx.beginPath();
+                ctx.arc(-35 * s - i * 20 * s, 5 * s, size * 0.5, 0, Math.PI * 2);
+                ctx.fill();
+            }
+            ctx.globalAlpha = 1;
+
+            // Cuerpo de la nave
+            ctx.shadowColor = 'rgba(100,200,255,0.5)';
+            ctx.shadowBlur = 40 * s;
+            ctx.fillStyle = '#45B7D1';
+            ctx.beginPath();
+            ctx.moveTo(30 * s, 0);
+            ctx.lineTo(-20 * s, -30 * s);
+            ctx.lineTo(-35 * s, -20 * s);
+            ctx.lineTo(-35 * s, 20 * s);
+            ctx.lineTo(-20 * s, 30 * s);
+            ctx.closePath();
+            ctx.fill();
+
+            // Alas
+            ctx.fillStyle = '#4ECDC4';
+            ctx.fillRect(-25 * s, -25 * s, -15 * s, 50 * s);
+            ctx.fillRect(-15 * s, -25 * s, -15 * s, 50 * s);
+
+            // Ventana
+            ctx.shadowBlur = 0;
+            ctx.fillStyle = '#88CCFF';
+            ctx.beginPath();
+            ctx.arc(10 * s, 0, 14 * s, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.fillStyle = '#66FF88';
+            ctx.font = `${28*s}px Arial`;
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText('🐱', 10 * s, 2 * s);
+
+            // Dorito en la mano del gato (visible en la ventana)
+            const doritoVuelta = Math.sin(juego.doritosAnim * 3) * 3 * s;
+            ctx.fillStyle = '#FF6B35';
+            ctx.shadowColor = 'rgba(255,100,50,0.3)';
+            ctx.shadowBlur = 15 * s;
+            ctx.beginPath();
+            ctx.moveTo(20 * s + doritoVuelta, -6 * s);
+            ctx.lineTo(12 * s + doritoVuelta, 6 * s);
+            ctx.lineTo(28 * s + doritoVuelta, 6 * s);
+            ctx.closePath();
+            ctx.fill();
+            ctx.fillStyle = 'rgba(255,255,255,0.2)';
+            ctx.beginPath();
+            ctx.arc(20 * s + doritoVuelta, 0, 4 * s, 0, Math.PI * 2);
+            ctx.fill();
+
+            ctx.restore();
+
+            // Doritos volando alrededor de la nave
             if (doritos.length === 0) {
                 crearDoritos();
             }
 
             for (const d of doritos) {
-                d.x += d.vx;
+                d.x += d.vx + Math.sin(juego.doritosAnim + d.x * 0.01) * 0.5 * s;
                 d.y += d.vy;
-                d.vy += 0.03 * s;
+                d.vy += 0.02 * s;
                 d.rot += d.rotV;
-                if (d.y > H + 20 * s) {
-                    d.y = -20 * s;
+                if (d.y > H + 30 * s) {
+                    d.y = -30 * s;
                     d.x = rand(W * 0.1, W * 0.9);
-                    d.vy = rand(-3, -1) * s;
+                    d.vy = rand(-2.5, -0.5) * s;
                 }
                 ctx.save();
                 ctx.translate(d.x, d.y);
                 ctx.rotate(d.rot);
                 ctx.shadowColor = d.color;
                 ctx.shadowBlur = 20 * s;
-                // Dorito triangular
                 ctx.fillStyle = d.color;
                 ctx.beginPath();
                 ctx.moveTo(0, -d.r);
@@ -862,7 +1108,6 @@
                 ctx.lineTo(d.r * 0.9, d.r * 0.7);
                 ctx.closePath();
                 ctx.fill();
-                // Detalles del dorito
                 ctx.fillStyle = 'rgba(255,255,255,0.15)';
                 ctx.beginPath();
                 ctx.arc(-d.r * 0.3, 0, d.r * 0.2, 0, Math.PI * 2);
@@ -873,114 +1118,41 @@
                 ctx.restore();
             }
 
+            // Textos finales
+            ctx.shadowBlur = 0;
             ctx.textAlign = 'center';
             ctx.textBaseline = 'middle';
 
-            // Título con sombra
+            ctx.fillStyle = '#66FF88';
+            ctx.font = `bold ${45*s}px Arial`;
             ctx.shadowColor = 'rgba(100,255,150,0.5)';
-            ctx.shadowBlur = 50 * s;
-            ctx.fillStyle = '#66FF88';
-            ctx.font = `bold ${50*s}px Arial`;
-            ctx.fillText('🎉 ¡MISIÓN CUMPLIDA! 🎉', W / 2, 100 * s);
+            ctx.shadowBlur = 40 * s;
+            ctx.fillText('🚀 ¡DE REGRESO A CASA!', W / 2, 60 * s);
 
-            ctx.shadowBlur = 0;
-            ctx.fillStyle = '#88ff88';
-            ctx.font = `${28*s}px Arial`;
-            ctx.fillText('🐱 El gato marciano llegó a su nave', W / 2, 170 * s);
-
-            // Gato comiendo Doritos
-            const gatoX = W / 2 - 30 * s;
-            const gatoY = 290 * s;
-            
-            // Dibujar gato comiendo
-            gato.comiendo = true;
-            gato.x = gatoX;
-            gato.y = gatoY - 30 * s;
-            gato.ancho = 70 * s;
-            gato.alto = 80 * s;
-            // Guardar estado original y restaurar después
-            const origX = gato.x;
-            const origY = gato.y;
-            gato.dibujar();
-            gato.x = origX;
-            gato.y = origY;
-            gato.comiendo = false;
-
-            // Dorito en la mano/boca del gato
-            ctx.shadowColor = '#FF6B35';
-            ctx.shadowBlur = 20 * s;
-            const doritoX = W / 2 + 40 * s + Math.sin(juego.doritosAnim * 2) * 5 * s;
-            const doritoY = 275 * s + Math.sin(juego.doritosAnim * 3) * 3 * s;
-            ctx.fillStyle = '#FF6B35';
-            ctx.beginPath();
-            ctx.moveTo(doritoX, doritoY - 12 * s);
-            ctx.lineTo(doritoX - 12 * s, doritoY + 8 * s);
-            ctx.lineTo(doritoX + 12 * s, doritoY + 8 * s);
-            ctx.closePath();
-            ctx.fill();
-            ctx.fillStyle = 'rgba(255,255,255,0.2)';
-            ctx.beginPath();
-            ctx.arc(doritoX - 3 * s, doritoY + 2 * s, 4 * s, 0, Math.PI * 2);
-            ctx.fill();
-
-            // Nave espacial
-            ctx.shadowBlur = 0;
-            const naveX = W / 2;
-            const naveY = 420 * s;
-            ctx.save();
-            ctx.translate(naveX, naveY);
-            ctx.shadowColor = 'rgba(100,200,255,0.3)';
-            ctx.shadowBlur = 30 * s;
-            ctx.fillStyle = '#45B7D1';
-            ctx.beginPath();
-            ctx.moveTo(0, -40 * s);
-            ctx.lineTo(-35 * s, 25 * s);
-            ctx.lineTo(35 * s, 25 * s);
-            ctx.closePath();
-            ctx.fill();
-            ctx.fillStyle = '#FFD93D';
-            ctx.beginPath();
-            ctx.arc(0, 5 * s, 14 * s, 0, Math.PI * 2);
-            ctx.fill();
-            ctx.fillStyle = '#FF6B6B';
-            ctx.fillRect(-12 * s, 25 * s, 24 * s, 12 * s);
-            // Ventana
-            ctx.fillStyle = '#88CCFF';
-            ctx.beginPath();
-            ctx.arc(0, 0, 10 * s, 0, Math.PI * 2);
-            ctx.fill();
-            // Gato en la ventana
-            ctx.fillStyle = '#66FF88';
-            ctx.font = `${28*s}px Arial`;
-            ctx.fillText('🐱', 0, 2 * s);
-            ctx.restore();
-
-            // Texto de llegada
             ctx.shadowBlur = 0;
             ctx.fillStyle = '#FFD93D';
-            ctx.font = `${22*s}px Arial`;
-            ctx.fillText('🚀 ¡Despegando hacia Gatito World!', W / 2, 510 * s);
-            
+            ctx.font = `${24*s}px Arial`;
+            ctx.fillText('🐱 El gato marciano llegó a Gatito World', W / 2, 110 * s);
+
             ctx.fillStyle = '#FFA94D';
-            ctx.font = `${20*s}px Arial`;
-            ctx.fillText('🍟 "¡Ñam ñam! ¡Doritos espaciales!" 🍟', W / 2, 550 * s);
+            ctx.font = `${22*s}px Arial`;
+            ctx.fillText('🍟 "¡Ñam ñam! ¡Doritos espaciales!" 🍟', W / 2, 150 * s);
 
-            // Puntuación
             ctx.fillStyle = '#fff';
             ctx.font = `${18*s}px Arial`;
-            ctx.fillText(`⭐ Puntuación: ${juego.score}`, W / 2, 590 * s);
+            ctx.fillText(`⭐ Puntuación: ${juego.score}`, W / 2, H - 120 * s);
 
             if (juego.score > juego.record) {
                 ctx.fillStyle = '#FFD700';
                 ctx.font = `bold ${20*s}px Arial`;
-                ctx.fillText('🏆 ¡NUEVO RÉCORD MUNDIAL!', W / 2, 625 * s);
+                ctx.fillText('🏆 ¡NUEVO RÉCORD MUNDIAL!', W / 2, H - 80 * s);
             }
 
             // Botón reiniciar
             const btnX = W / 2 - 100 * s;
-            const btnY = 660 * s;
+            const btnY = H - 50 * s;
             const btnW = 200 * s;
-            const btnH = 50 * s;
+            const btnH = 45 * s;
 
             ctx.shadowColor = 'rgba(100,255,150,0.3)';
             ctx.shadowBlur = 20 * s;
@@ -995,7 +1167,7 @@
 
             ctx.shadowBlur = 0;
             ctx.fillStyle = '#fff';
-            ctx.font = `bold ${20*s}px Arial`;
+            ctx.font = `bold ${18*s}px Arial`;
             ctx.fillText('🔄 JUGAR DE NUEVO', W / 2, btnY + btnH / 2);
 
             const handler = () => {
@@ -1035,15 +1207,18 @@
             ctx.font = `${16*s}px Arial`;
             ctx.fillText('⬆ / ⬇  Moverte entre carriles', W / 2, 235 * s);
             ctx.fillText('Esquiva los obstáculos y llega a 100 puntos', W / 2, 265 * s);
+            ctx.fillStyle = '#FF6B6B';
+            ctx.font = `${14*s}px Arial`;
+            ctx.fillText('⚠️ Cuidado con las naves enemigas que disparan', W / 2, 295 * s);
 
             if (juego.record > 0) {
                 ctx.fillStyle = '#FFD700';
                 ctx.font = `${18*s}px Arial`;
-                ctx.fillText(`🏆 Récord: ${juego.record}`, W / 2, 320 * s);
+                ctx.fillText(`🏆 Récord: ${juego.record}`, W / 2, 340 * s);
             }
 
             const btnX = W / 2 - 100 * s;
-            const btnY = 370 * s;
+            const btnY = 390 * s;
             const btnW = 200 * s;
             const btnH = 55 * s;
 
