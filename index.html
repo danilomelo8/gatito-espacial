@@ -111,7 +111,7 @@
         <canvas id="gameCanvas"></canvas>
         <div id="ui">
             <span>🐱 <span id="scoreDisplay">0</span>/100</span>
-            <span>🚀 <span id="speedDisplay">1</span>x</span>
+            <span>🚀 <span id="speedDisplay">10</span>x</span>
         </div>
         <div id="touchControls">
             <button id="btnUp">⬆</button>
@@ -147,14 +147,15 @@
             victoria: false,
             score: 0,
             maxScore: 100,
-            velocidad: 1,
-            velocidadBase: 4,
+            velocidad: 10,
+            velocidadBase: 12,
             frame: 0,
             carriles: 3,
-            ultimoSpawn: 0,
             spawnTimer: 0,
             record: parseInt(localStorage.getItem('spaceCatRecord')) || 0,
-            estrellas: []
+            estrellas: [],
+            victoriaAnim: 0,
+            doritosAnim: 0
         };
 
         // ============================================================
@@ -169,10 +170,11 @@
                 this.y = this.getY();
                 this.animacion = 0;
                 this.parpadeo = 0;
-                this.orejaOffset = 0;
                 this.colaMov = 0;
                 this.patas = 0;
                 this.antenaMov = 0;
+                this.comiendo = false;
+                this.comerAnim = 0;
             }
 
             getY() {
@@ -205,6 +207,9 @@
                 this.colaMov += 0.08;
                 this.patas += 0.06;
                 this.antenaMov += 0.04;
+                if (this.comiendo) {
+                    this.comerAnim += 0.1;
+                }
 
                 ctx.save();
 
@@ -228,16 +233,14 @@
                 ctx.arc(x + w / 2, y + h / 3 + 5 * s, w / 2.5, 0, Math.PI * 2);
                 ctx.fill();
 
-                // ===== ANTENAS DE MARCIANITO =====
+                // ===== ANTENAS =====
                 const antMov = Math.sin(this.antenaMov) * 3 * s;
                 ctx.strokeStyle = '#33CC55';
                 ctx.lineWidth = 3 * s;
-                // Antena izquierda
                 ctx.beginPath();
                 ctx.moveTo(x + w / 2 - 10 * s, y + 4 * s);
                 ctx.quadraticCurveTo(x + w / 2 - 18 * s, y - 20 * s + antMov, x + w / 2 - 8 * s, y - 30 * s + antMov);
                 ctx.stroke();
-                // Bolita antena izquierda
                 ctx.fillStyle = '#FF6B6B';
                 ctx.shadowColor = 'rgba(255,100,100,0.4)';
                 ctx.shadowBlur = 15 * s;
@@ -245,7 +248,6 @@
                 ctx.arc(x + w / 2 - 8 * s, y - 30 * s + antMov, 5 * s, 0, Math.PI * 2);
                 ctx.fill();
                 
-                // Antena derecha
                 ctx.shadowColor = 'rgba(100,255,150,0.2)';
                 ctx.shadowBlur = 30 * s;
                 ctx.strokeStyle = '#33CC55';
@@ -254,7 +256,6 @@
                 ctx.moveTo(x + w / 2 + 10 * s, y + 4 * s);
                 ctx.quadraticCurveTo(x + w / 2 + 18 * s, y - 20 * s - antMov, x + w / 2 + 8 * s, y - 30 * s - antMov);
                 ctx.stroke();
-                // Bolita antena derecha
                 ctx.fillStyle = '#FF6B6B';
                 ctx.shadowColor = 'rgba(255,100,100,0.4)';
                 ctx.shadowBlur = 15 * s;
@@ -265,20 +266,17 @@
                 // ===== OREJAS =====
                 ctx.shadowBlur = 0;
                 ctx.fillStyle = '#44DD66';
-                // Oreja izquierda
                 ctx.beginPath();
                 ctx.moveTo(x + w / 2 - 14 * s, y + 4 * s);
                 ctx.lineTo(x + w / 2 - 26 * s, y - 6 * s);
                 ctx.lineTo(x + w / 2 - 6 * s, y + 2 * s);
                 ctx.fill();
-                // Oreja derecha
                 ctx.beginPath();
                 ctx.moveTo(x + w / 2 + 14 * s, y + 4 * s);
                 ctx.lineTo(x + w / 2 + 26 * s, y - 6 * s);
                 ctx.lineTo(x + w / 2 + 6 * s, y + 2 * s);
                 ctx.fill();
 
-                // Oreja interna
                 ctx.fillStyle = '#88FF99';
                 ctx.beginPath();
                 ctx.moveTo(x + w / 2 - 14 * s, y + 5 * s);
@@ -301,7 +299,6 @@
                 ctx.ellipse(x + w / 2 + 10 * s, y + h / 3 + 6 * s, 8 * s, 9 * s * parpadeo, 0, 0, Math.PI * 2);
                 ctx.fill();
 
-                // Iris (verdes brillantes)
                 ctx.fillStyle = '#00FF88';
                 ctx.shadowColor = 'rgba(0,255,136,0.3)';
                 ctx.shadowBlur = 10 * s;
@@ -313,7 +310,6 @@
                 ctx.arc(x + w / 2 + 10 * s + mirar, y + h / 3 + 8 * s, 5 * s, 0, Math.PI * 2);
                 ctx.fill();
 
-                // Pupilas
                 ctx.shadowBlur = 0;
                 ctx.fillStyle = '#0a1a0a';
                 ctx.beginPath();
@@ -323,7 +319,6 @@
                 ctx.arc(x + w / 2 + 10 * s + mirar + 2 * s, y + h / 3 + 9 * s, 2.5 * s, 0, Math.PI * 2);
                 ctx.fill();
 
-                // Brillo ojos
                 ctx.fillStyle = 'rgba(255,255,255,0.7)';
                 ctx.beginPath();
                 ctx.arc(x + w / 2 - 12 * s + mirar, y + h / 3 + 5 * s, 2 * s, 0, Math.PI * 2);
@@ -370,35 +365,42 @@
                 ctx.lineTo(x + w / 2 + 22 * s, bigoteY + 8 * s);
                 ctx.stroke();
 
-                // ===== BOCA (sonrisa) =====
+                // ===== BOCA =====
                 ctx.strokeStyle = '#2E7D32';
                 ctx.lineWidth = 1.5 * s;
-                ctx.beginPath();
-                ctx.arc(x + w / 2, y + h / 3 + 20 * s, 4 * s, 0.1 * Math.PI, 0.9 * Math.PI);
-                ctx.stroke();
+                if (this.comiendo) {
+                    // Boca abierta comiendo
+                    ctx.fillStyle = '#2E7D32';
+                    ctx.beginPath();
+                    ctx.arc(x + w / 2, y + h / 3 + 20 * s, 6 * s, 0, Math.PI);
+                    ctx.fill();
+                    ctx.fillStyle = '#FF6B6B';
+                    ctx.beginPath();
+                    ctx.arc(x + w / 2 - 2 * s, y + h / 3 + 20 * s + Math.sin(this.comerAnim) * 2 * s, 3 * s, 0, Math.PI * 2);
+                    ctx.fill();
+                } else {
+                    ctx.beginPath();
+                    ctx.arc(x + w / 2, y + h / 3 + 20 * s, 4 * s, 0.1 * Math.PI, 0.9 * Math.PI);
+                    ctx.stroke();
+                }
 
                 // ===== PATAS =====
                 const paso = Math.sin(this.patas) * 5 * s;
                 ctx.fillStyle = '#44DD66';
                 ctx.shadowBlur = 0;
-                // Pata delantera izquierda
                 ctx.beginPath();
                 ctx.roundRect(x + 4 * s, y + h / 2 + 10 * s + paso, 8 * s, 14 * s, 4 * s);
                 ctx.fill();
-                // Pata delantera derecha
                 ctx.beginPath();
                 ctx.roundRect(x + w - 12 * s, y + h / 2 + 10 * s - paso, 8 * s, 14 * s, 4 * s);
                 ctx.fill();
-                // Pata trasera izquierda
                 ctx.beginPath();
                 ctx.roundRect(x + 2 * s, y + h - 12 * s + paso * 0.5, 9 * s, 12 * s, 4 * s);
                 ctx.fill();
-                // Pata trasera derecha
                 ctx.beginPath();
                 ctx.roundRect(x + w - 11 * s, y + h - 12 * s - paso * 0.5, 9 * s, 12 * s, 4 * s);
                 ctx.fill();
 
-                // Almohadillas de las patas
                 ctx.fillStyle = '#88FF99';
                 ctx.beginPath();
                 ctx.arc(x + 8 * s, y + h / 2 + 18 * s + paso, 3 * s, 0, Math.PI * 2);
@@ -426,7 +428,6 @@
                 ctx.lineCap = 'round';
                 ctx.stroke();
 
-                // Punta de la cola (más clara)
                 ctx.fillStyle = '#88FF99';
                 ctx.beginPath();
                 ctx.arc(
@@ -436,7 +437,7 @@
                 );
                 ctx.fill();
 
-                // ===== RAYAS DEL GATO =====
+                // ===== RAYAS =====
                 ctx.shadowBlur = 0;
                 ctx.fillStyle = 'rgba(30, 160, 60, 0.3)';
                 ctx.fillRect(x + w / 2 - 12 * s, y + h / 3 + 24 * s, 24 * s, 4 * s);
@@ -447,7 +448,7 @@
         }
 
         // ============================================================
-        // CLASE OBSTÁCULO
+        // CLASE OBSTÁCULO - MÁS RÁPIDO
         // ============================================================
         class Obstaculo {
             constructor(carril, tipo) {
@@ -458,7 +459,7 @@
                 this.alto = 28 * s;
                 this.x = W + 30 * s;
                 this.y = this.getY();
-                this.velocidad = (juego.velocidadBase + juego.velocidad * 0.5) * s;
+                this.velocidad = (juego.velocidadBase + juego.velocidad * 0.8) * s;
                 this.rotacion = 0;
                 this.vida = true;
                 this.contado = false;
@@ -466,10 +467,9 @@
                 this.color = this.colores[randInt(0, 6)];
                 this.formas = ['meteorito', 'asteroide', 'basura', 'satelite', 'ovni'];
                 this.forma = this.formas[randInt(0, 4)];
-                // Tamaño variable
-                if (Math.random() < 0.2) {
-                    this.ancho *= 1.4;
-                    this.alto *= 1.4;
+                if (Math.random() < 0.15) {
+                    this.ancho *= 1.5;
+                    this.alto *= 1.5;
                 }
             }
 
@@ -481,7 +481,7 @@
 
             mover() {
                 this.x -= this.velocidad;
-                this.rotacion += 0.08;
+                this.rotacion += 0.1;
                 if (this.x < -60 * S) {
                     this.vida = false;
                 }
@@ -556,7 +556,6 @@
                     ctx.arc(0, -h / 2 - 12 * s, 4 * s, 0, Math.PI * 2);
                     ctx.fill();
                 } else {
-                    // OVNI
                     ctx.fillStyle = '#7C4DFF';
                     ctx.beginPath();
                     ctx.ellipse(0, 0, w / 1.5, h / 3, 0, 0, Math.PI * 2);
@@ -569,7 +568,6 @@
                     ctx.beginPath();
                     ctx.arc(0, -h / 4, 4 * s, 0, Math.PI * 2);
                     ctx.fill();
-                    // Luces del OVNI
                     ctx.fillStyle = '#FF6B6B';
                     ctx.beginPath();
                     ctx.arc(-w / 3, 2 * s, 3 * s, 0, Math.PI * 2);
@@ -584,7 +582,6 @@
                     ctx.fill();
                 }
 
-                // Brillo
                 ctx.shadowBlur = 0;
                 ctx.fillStyle = 'rgba(255,255,255,0.12)';
                 ctx.beginPath();
@@ -653,11 +650,11 @@
         }
 
         // ============================================================
-        // ESTRELLAS DE FONDO
+        // ESTRELLAS
         // ============================================================
         function crearEstrellas() {
             juego.estrellas = [];
-            for (let i = 0; i < 120; i++) {
+            for (let i = 0; i < 150; i++) {
                 juego.estrellas.push({
                     x: Math.random() * W,
                     y: Math.random() * H,
@@ -713,16 +710,18 @@
             obstaculos = [];
             particulas = [];
             juego.score = 0;
-            juego.velocidad = 1;
-            juego.velocidadBase = 5 * s;
+            juego.velocidad = 10;
+            juego.velocidadBase = 12 * s;
             juego.gameOver = false;
             juego.victoria = false;
             juego.jugando = true;
             juego.menu = false;
+            juego.victoriaAnim = 0;
+            juego.doritosAnim = 0;
             spawnTimer = 0;
             frameCount = 0;
             document.getElementById('scoreDisplay').textContent = '0';
-            document.getElementById('speedDisplay').textContent = '1';
+            document.getElementById('speedDisplay').textContent = '10';
             crearEstrellas();
         }
 
@@ -730,14 +729,15 @@
             const carrilesDisponibles = [];
             for (let i = 0; i < 3; i++) carrilesDisponibles.push(i);
 
-            const numObstaculos = juego.score > 30 && Math.random() < 0.35 ? 2 : 1;
+            const numObstaculos = juego.score > 25 && Math.random() < 0.4 ? 2 : 1;
 
             for (let i = 0; i < numObstaculos; i++) {
                 if (carrilesDisponibles.length === 0) break;
                 const idx = randInt(0, carrilesDisponibles.length - 1);
                 const carril = carrilesDisponibles[idx];
                 carrilesDisponibles.splice(idx, 1);
-                obstaculos.push(new Obstaculo(carril));
+                const obs = new Obstaculo(carril);
+                obstaculos.push(obs);
             }
         }
 
@@ -747,16 +747,16 @@
             frameCount++;
             const s = S;
 
-            // Aumentar velocidad más rápido
-            if (frameCount % 45 === 0 && juego.velocidad < 6) {
-                juego.velocidad += 0.03;
+            // Aumentar velocidad muy rápido
+            if (frameCount % 30 === 0 && juego.velocidad < 25) {
+                juego.velocidad += 0.15;
                 document.getElementById('speedDisplay').textContent = Math.floor(juego.velocidad * 10) / 10;
             }
 
-            // Spawn de obstáculos - más espaciados
-            const intervalo = Math.max(50, 120 - juego.velocidad * 4);
+            // Spawn más rápido pero más espaciado
+            const intervalo = Math.max(30, 70 - juego.velocidad * 1.5);
             juego.spawnTimer++;
-            if (juego.spawnTimer > intervalo + Math.random() * 60) {
+            if (juego.spawnTimer > intervalo + Math.random() * 30) {
                 juego.spawnTimer = 0;
                 spawnObstaculo();
             }
@@ -787,16 +787,6 @@
                             juego.record = juego.score;
                             localStorage.setItem('spaceCatRecord', String(juego.record));
                         }
-                        for (let i = 0; i < 60; i++) {
-                            setTimeout(() => {
-                                crearParticulas(
-                                    rand(50 * s, W - 50 * s),
-                                    rand(50 * s, H - 50 * s),
-                                    ['#FF6B35', '#F7C948', '#FF4444', '#4CAF50', '#FFD700', '#66FF88', '#FF6B6B'][randInt(0, 6)],
-                                    15, 6
-                                );
-                            }, i * 60);
-                        }
                         return;
                     }
                 }
@@ -806,75 +796,222 @@
             actualizarParticulas();
 
             for (const e of juego.estrellas) {
-                e.x -= 0.15 * juego.velocidad * S;
+                e.x -= 0.2 * juego.velocidad * S;
                 if (e.x < 0) e.x = W;
             }
         }
 
         // ============================================================
-        // DIBUJADO
+        // ANIMACIÓN DE VICTORIA - GATO COMIENDO DORITOS
         // ============================================================
-        function dibujar() {
+        let doritos = [];
+
+        function crearDoritos() {
             const s = S;
-            ctx.clearRect(0, 0, W, H);
-
-            // Fondo espacial
-            const grad = ctx.createRadialGradient(W / 2, H / 2, 0, W / 2, H / 2, Math.max(W, H) * 1.2);
-            grad.addColorStop(0, '#0a0a2a');
-            grad.addColorStop(0.5, '#05051a');
-            grad.addColorStop(1, '#000008');
-            ctx.fillStyle = grad;
-            ctx.fillRect(0, 0, W, H);
-
-            // Estrellas
-            dibujarEstrellas();
-
-            // Nebulosas
-            ctx.globalAlpha = 0.04;
-            for (let i = 0; i < 4; i++) {
-                const grad2 = ctx.createRadialGradient(
-                    W * (0.1 + i * 0.27), H * (0.2 + i * 0.2), 0,
-                    W * (0.1 + i * 0.27), H * (0.2 + i * 0.2), W * 0.5
-                );
-                const colores = ['#4ECDC4', '#FF6B6B', '#45B7D1', '#B388FF'];
-                grad2.addColorStop(0, colores[i % 4]);
-                grad2.addColorStop(1, 'transparent');
-                ctx.fillStyle = grad2;
-                ctx.fillRect(0, 0, W, H);
+            doritos = [];
+            for (let i = 0; i < 30; i++) {
+                doritos.push({
+                    x: rand(W * 0.2, W * 0.8),
+                    y: rand(H * 0.3, H * 0.7),
+                    r: rand(8 * s, 20 * s),
+                    color: ['#FF6B35', '#F7C948', '#FF4444', '#FF8C00', '#FFD700'][randInt(0, 4)],
+                    vx: rand(-1, 1) * s,
+                    vy: rand(-2, -0.5) * s,
+                    rot: rand(0, Math.PI * 2),
+                    rotV: rand(-0.05, 0.05)
+                });
             }
-            ctx.globalAlpha = 1;
-
-            // Carriles
-            ctx.strokeStyle = 'rgba(255,255,255,0.04)';
-            ctx.lineWidth = 2 * s;
-            ctx.setLineDash([8 * s, 15 * s]);
-            const espacioTotal = H - 100 * s;
-            const altoCarril = espacioTotal / 3;
-            for (let i = 1; i < 3; i++) {
-                const y = 50 * s + i * altoCarril;
-                ctx.beginPath();
-                ctx.moveTo(0, y);
-                ctx.lineTo(W, y);
-                ctx.stroke();
-            }
-            ctx.setLineDash([]);
-
-            // Obstáculos
-            for (const obs of obstaculos) {
-                obs.dibujar();
-            }
-
-            // Gato
-            if (gato) gato.dibujar();
-
-            // Partículas
-            dibujarParticulas();
-
-            if (juego.menu) dibujarMenu();
-            if (juego.gameOver) dibujarGameOver();
-            if (juego.victoria) dibujarVictoria();
         }
 
+        function dibujarVictoria() {
+            const s = S;
+            
+            // Fondo festivo
+            ctx.fillStyle = 'rgba(0,0,0,0.75)';
+            ctx.fillRect(0, 0, W, H);
+
+            // Efecto de fuegos artificiales (doritos volando)
+            juego.victoriaAnim += 0.02;
+            juego.doritosAnim += 0.05;
+
+            // Doritos volando
+            if (doritos.length === 0) {
+                crearDoritos();
+            }
+
+            for (const d of doritos) {
+                d.x += d.vx;
+                d.y += d.vy;
+                d.vy += 0.03 * s;
+                d.rot += d.rotV;
+                if (d.y > H + 20 * s) {
+                    d.y = -20 * s;
+                    d.x = rand(W * 0.1, W * 0.9);
+                    d.vy = rand(-3, -1) * s;
+                }
+                ctx.save();
+                ctx.translate(d.x, d.y);
+                ctx.rotate(d.rot);
+                ctx.shadowColor = d.color;
+                ctx.shadowBlur = 20 * s;
+                // Dorito triangular
+                ctx.fillStyle = d.color;
+                ctx.beginPath();
+                ctx.moveTo(0, -d.r);
+                ctx.lineTo(-d.r * 0.9, d.r * 0.7);
+                ctx.lineTo(d.r * 0.9, d.r * 0.7);
+                ctx.closePath();
+                ctx.fill();
+                // Detalles del dorito
+                ctx.fillStyle = 'rgba(255,255,255,0.15)';
+                ctx.beginPath();
+                ctx.arc(-d.r * 0.3, 0, d.r * 0.2, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.beginPath();
+                ctx.arc(d.r * 0.3, d.r * 0.2, d.r * 0.15, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.restore();
+            }
+
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+
+            // Título con sombra
+            ctx.shadowColor = 'rgba(100,255,150,0.5)';
+            ctx.shadowBlur = 50 * s;
+            ctx.fillStyle = '#66FF88';
+            ctx.font = `bold ${50*s}px Arial`;
+            ctx.fillText('🎉 ¡MISIÓN CUMPLIDA! 🎉', W / 2, 100 * s);
+
+            ctx.shadowBlur = 0;
+            ctx.fillStyle = '#88ff88';
+            ctx.font = `${28*s}px Arial`;
+            ctx.fillText('🐱 El gato marciano llegó a su nave', W / 2, 170 * s);
+
+            // Gato comiendo Doritos
+            const gatoX = W / 2 - 30 * s;
+            const gatoY = 290 * s;
+            
+            // Dibujar gato comiendo
+            gato.comiendo = true;
+            gato.x = gatoX;
+            gato.y = gatoY - 30 * s;
+            gato.ancho = 70 * s;
+            gato.alto = 80 * s;
+            // Guardar estado original y restaurar después
+            const origX = gato.x;
+            const origY = gato.y;
+            gato.dibujar();
+            gato.x = origX;
+            gato.y = origY;
+            gato.comiendo = false;
+
+            // Dorito en la mano/boca del gato
+            ctx.shadowColor = '#FF6B35';
+            ctx.shadowBlur = 20 * s;
+            const doritoX = W / 2 + 40 * s + Math.sin(juego.doritosAnim * 2) * 5 * s;
+            const doritoY = 275 * s + Math.sin(juego.doritosAnim * 3) * 3 * s;
+            ctx.fillStyle = '#FF6B35';
+            ctx.beginPath();
+            ctx.moveTo(doritoX, doritoY - 12 * s);
+            ctx.lineTo(doritoX - 12 * s, doritoY + 8 * s);
+            ctx.lineTo(doritoX + 12 * s, doritoY + 8 * s);
+            ctx.closePath();
+            ctx.fill();
+            ctx.fillStyle = 'rgba(255,255,255,0.2)';
+            ctx.beginPath();
+            ctx.arc(doritoX - 3 * s, doritoY + 2 * s, 4 * s, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Nave espacial
+            ctx.shadowBlur = 0;
+            const naveX = W / 2;
+            const naveY = 420 * s;
+            ctx.save();
+            ctx.translate(naveX, naveY);
+            ctx.shadowColor = 'rgba(100,200,255,0.3)';
+            ctx.shadowBlur = 30 * s;
+            ctx.fillStyle = '#45B7D1';
+            ctx.beginPath();
+            ctx.moveTo(0, -40 * s);
+            ctx.lineTo(-35 * s, 25 * s);
+            ctx.lineTo(35 * s, 25 * s);
+            ctx.closePath();
+            ctx.fill();
+            ctx.fillStyle = '#FFD93D';
+            ctx.beginPath();
+            ctx.arc(0, 5 * s, 14 * s, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.fillStyle = '#FF6B6B';
+            ctx.fillRect(-12 * s, 25 * s, 24 * s, 12 * s);
+            // Ventana
+            ctx.fillStyle = '#88CCFF';
+            ctx.beginPath();
+            ctx.arc(0, 0, 10 * s, 0, Math.PI * 2);
+            ctx.fill();
+            // Gato en la ventana
+            ctx.fillStyle = '#66FF88';
+            ctx.font = `${28*s}px Arial`;
+            ctx.fillText('🐱', 0, 2 * s);
+            ctx.restore();
+
+            // Texto de llegada
+            ctx.shadowBlur = 0;
+            ctx.fillStyle = '#FFD93D';
+            ctx.font = `${22*s}px Arial`;
+            ctx.fillText('🚀 ¡Despegando hacia Gatito World!', W / 2, 510 * s);
+            
+            ctx.fillStyle = '#FFA94D';
+            ctx.font = `${20*s}px Arial`;
+            ctx.fillText('🍟 "¡Ñam ñam! ¡Doritos espaciales!" 🍟', W / 2, 550 * s);
+
+            // Puntuación
+            ctx.fillStyle = '#fff';
+            ctx.font = `${18*s}px Arial`;
+            ctx.fillText(`⭐ Puntuación: ${juego.score}`, W / 2, 590 * s);
+
+            if (juego.score > juego.record) {
+                ctx.fillStyle = '#FFD700';
+                ctx.font = `bold ${20*s}px Arial`;
+                ctx.fillText('🏆 ¡NUEVO RÉCORD MUNDIAL!', W / 2, 625 * s);
+            }
+
+            // Botón reiniciar
+            const btnX = W / 2 - 100 * s;
+            const btnY = 660 * s;
+            const btnW = 200 * s;
+            const btnH = 50 * s;
+
+            ctx.shadowColor = 'rgba(100,255,150,0.3)';
+            ctx.shadowBlur = 20 * s;
+
+            const grad = ctx.createLinearGradient(btnX, btnY, btnX, btnY + btnH);
+            grad.addColorStop(0, '#33CC55');
+            grad.addColorStop(1, '#1A8C33');
+            ctx.fillStyle = grad;
+            ctx.beginPath();
+            ctx.roundRect(btnX, btnY, btnW, btnH, 12);
+            ctx.fill();
+
+            ctx.shadowBlur = 0;
+            ctx.fillStyle = '#fff';
+            ctx.font = `bold ${20*s}px Arial`;
+            ctx.fillText('🔄 JUGAR DE NUEVO', W / 2, btnY + btnH / 2);
+
+            const handler = () => {
+                canvas.removeEventListener('click', handler);
+                canvas.removeEventListener('touchstart', handler);
+                juego.victoria = false;
+                doritos = [];
+                juego.menu = true;
+            };
+            canvas.addEventListener('click', handler);
+            canvas.addEventListener('touchstart', handler);
+        }
+
+        // ============================================================
+        // DIBUJO DEL MENÚ Y GAME OVER
+        // ============================================================
         function dibujarMenu() {
             const s = S;
             ctx.fillStyle = 'rgba(0,0,0,0.7)';
@@ -928,7 +1065,7 @@
 
             ctx.fillStyle = 'rgba(255,255,255,0.2)';
             ctx.font = `${12*s}px Arial`;
-            ctx.fillText('🐱 El gato verde con antenitas te espera', W / 2, H - 30 * s);
+            ctx.fillText('🐱 Velocidad x10 - ¡Prepárate!', W / 2, H - 30 * s);
 
             if (juego.menu) {
                 const handler = (e) => {
@@ -1017,105 +1154,62 @@
             canvas.addEventListener('touchstart', handler);
         }
 
-        function dibujarVictoria() {
+        // ============================================================
+        // DIBUJADO PRINCIPAL
+        // ============================================================
+        function dibujar() {
             const s = S;
-            ctx.fillStyle = 'rgba(0,0,0,0.7)';
+            ctx.clearRect(0, 0, W, H);
+
+            // Fondo espacial
+            const grad = ctx.createRadialGradient(W / 2, H / 2, 0, W / 2, H / 2, Math.max(W, H) * 1.2);
+            grad.addColorStop(0, '#0a0a2a');
+            grad.addColorStop(0.5, '#05051a');
+            grad.addColorStop(1, '#000008');
+            ctx.fillStyle = grad;
             ctx.fillRect(0, 0, W, H);
 
-            ctx.textAlign = 'center';
-            ctx.textBaseline = 'middle';
+            dibujarEstrellas();
 
-            ctx.shadowColor = 'rgba(100,255,150,0.5)';
-            ctx.shadowBlur = 50 * s;
+            ctx.globalAlpha = 0.04;
+            for (let i = 0; i < 4; i++) {
+                const grad2 = ctx.createRadialGradient(
+                    W * (0.1 + i * 0.27), H * (0.2 + i * 0.2), 0,
+                    W * (0.1 + i * 0.27), H * (0.2 + i * 0.2), W * 0.5
+                );
+                const colores = ['#4ECDC4', '#FF6B6B', '#45B7D1', '#B388FF'];
+                grad2.addColorStop(0, colores[i % 4]);
+                grad2.addColorStop(1, 'transparent');
+                ctx.fillStyle = grad2;
+                ctx.fillRect(0, 0, W, H);
+            }
+            ctx.globalAlpha = 1;
 
-            ctx.fillStyle = '#66FF88';
-            ctx.font = `bold ${50*s}px Arial`;
-            ctx.fillText('🎉 ¡MISIÓN CUMPLIDA! 🎉', W / 2, 110 * s);
+            // Carriles
+            ctx.strokeStyle = 'rgba(255,255,255,0.04)';
+            ctx.lineWidth = 2 * s;
+            ctx.setLineDash([8 * s, 15 * s]);
+            const espacioTotal = H - 100 * s;
+            const altoCarril = espacioTotal / 3;
+            for (let i = 1; i < 3; i++) {
+                const y = 50 * s + i * altoCarril;
+                ctx.beginPath();
+                ctx.moveTo(0, y);
+                ctx.lineTo(W, y);
+                ctx.stroke();
+            }
+            ctx.setLineDash([]);
 
-            ctx.shadowBlur = 0;
-            ctx.fillStyle = '#88ff88';
-            ctx.font = `${28*s}px Arial`;
-            ctx.fillText('🐱 El gato marciano llegó a su nave', W / 2, 180 * s);
-
-            ctx.fillStyle = '#FFA94D';
-            ctx.font = `${24*s}px Arial`;
-            ctx.fillText('🍟 ¡Y se comió unos Doritos! 🍟', W / 2, 230 * s);
-
-            ctx.fillStyle = '#fff';
-            ctx.font = `${22*s}px Arial`;
-            ctx.fillText(`⭐ Puntuación: ${juego.score}`, W / 2, 285 * s);
-
-            if (juego.score > juego.record) {
-                juego.record = juego.score;
-                localStorage.setItem('spaceCatRecord', String(juego.record));
-                ctx.fillStyle = '#FFD700';
-                ctx.font = `bold ${24*s}px Arial`;
-                ctx.fillText('🏆 ¡NUEVO RÉCORD MUNDIAL!', W / 2, 330 * s);
-            } else {
-                ctx.fillStyle = '#aaa';
-                ctx.font = `${18*s}px Arial`;
-                ctx.fillText(`🏆 Récord: ${juego.record}`, W / 2, 330 * s);
+            for (const obs of obstaculos) {
+                obs.dibujar();
             }
 
-            // Nave espacial
-            const naveX = W / 2;
-            const naveY = 400 * s;
-            ctx.save();
-            ctx.translate(naveX, naveY);
-            ctx.shadowColor = 'rgba(100,200,255,0.3)';
-            ctx.shadowBlur = 30 * s;
-            ctx.fillStyle = '#45B7D1';
-            ctx.beginPath();
-            ctx.moveTo(0, -35 * s);
-            ctx.lineTo(-30 * s, 22 * s);
-            ctx.lineTo(30 * s, 22 * s);
-            ctx.closePath();
-            ctx.fill();
-            ctx.fillStyle = '#FFD93D';
-            ctx.beginPath();
-            ctx.arc(0, 5 * s, 12 * s, 0, Math.PI * 2);
-            ctx.fill();
-            ctx.fillStyle = '#FF6B6B';
-            ctx.fillRect(-10 * s, 22 * s, 20 * s, 10 * s);
-            // Ventana
-            ctx.fillStyle = '#88CCFF';
-            ctx.beginPath();
-            ctx.arc(0, 0, 8 * s, 0, Math.PI * 2);
-            ctx.fill();
-            ctx.fillStyle = '#66FF88';
-            ctx.font = `${25*s}px Arial`;
-            ctx.fillText('🐱', 0, 2 * s);
-            ctx.restore();
+            if (gato) gato.dibujar();
+            dibujarParticulas();
 
-            const btnX = W / 2 - 100 * s;
-            const btnY = 490 * s;
-            const btnW = 200 * s;
-            const btnH = 50 * s;
-
-            ctx.shadowColor = 'rgba(100,255,150,0.3)';
-            ctx.shadowBlur = 20 * s;
-
-            const grad = ctx.createLinearGradient(btnX, btnY, btnX, btnY + btnH);
-            grad.addColorStop(0, '#33CC55');
-            grad.addColorStop(1, '#1A8C33');
-            ctx.fillStyle = grad;
-            ctx.beginPath();
-            ctx.roundRect(btnX, btnY, btnW, btnH, 12);
-            ctx.fill();
-
-            ctx.shadowBlur = 0;
-            ctx.fillStyle = '#fff';
-            ctx.font = `bold ${20*s}px Arial`;
-            ctx.fillText('🔄 JUGAR DE NUEVO', W / 2, btnY + btnH / 2);
-
-            const handler = () => {
-                canvas.removeEventListener('click', handler);
-                canvas.removeEventListener('touchstart', handler);
-                juego.victoria = false;
-                juego.menu = true;
-            };
-            canvas.addEventListener('click', handler);
-            canvas.addEventListener('touchstart', handler);
+            if (juego.menu) dibujarMenu();
+            if (juego.gameOver) dibujarGameOver();
+            if (juego.victoria) dibujarVictoria();
         }
 
         // ============================================================
